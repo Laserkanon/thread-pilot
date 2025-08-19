@@ -74,14 +74,41 @@ The solution uses dedicated `.Contracts` projects (e.g., `Insurance.Service.Cont
 This is the simplest way to get the entire solution running, as it handles database setup and service configuration automatically.
 
 1.  **Clone the repository.**
-2.  **Run Docker Compose from the root directory:**
+2.  **Navigate to the root directory** of the project in your terminal.
+3.  **Run Docker Compose:**
     ```bash
     docker-compose up --build
     ```
     This command will:
-    -   Build the service images.
-    -   Start containers for both services and their SQL Server databases.
-    -   Automatically run the database migrations to set up the schema and seed data.
+    -   Build the Docker images for each service.
+    -   Start containers for the `Vehicle.Service`, `Insurance.Service`, and a shared SQL Server database.
+    -   Automatically run database migrations to set up the required schemas and seed initial data.
+
+    You should see logs from all services in your terminal. Wait for the health checks to pass to ensure everything is running correctly.
+
+#### Verifying the Services with Docker
+
+Once the containers are running, you can verify that the services are operational. The services are exposed on the following ports:
+-   **`Vehicle.Service`**: `http://localhost:5081`
+-   **`Insurance.Service`**: `http://localhost:5082`
+
+You can use the interactive Swagger UI or `curl` to test the endpoints:
+
+-   **Vehicle Service**:
+    -   **Swagger UI**: [http://localhost:5081/swagger](http://localhost:5081/swagger)
+    -   **Example `curl`**:
+        ```bash
+        # Get vehicle details for a specific car
+        curl http://localhost:5081/api/v1/vehicles/ABC123
+        ```
+
+-   **Insurance Service**:
+    -   **Swagger UI**: [http://localhost:5082/swagger](http://localhost:5082/swagger)
+    -   **Example `curl`**:
+        ```bash
+        # Get all insurances for a person (which in turn calls the vehicle service)
+        curl http://localhost:5082/api/v1/insurances/199001011234
+        ```
 
 ### Option B: Manual Setup (without Docker)
 
@@ -108,11 +135,11 @@ If you prefer to run the services directly on your machine:
     # Service will be available at http://localhost:5296
     ```
 
-### Verifying the Endpoints
+#### Verifying the Endpoints (Manual Setup)
 
 When you run the services locally, a Swagger UI page should automatically open in your browser. This interface allows you to explore and test the API endpoints interactively.
 
-Alternatively, you can use `curl` or a tool like Postman:
+Alternatively, you can use `curl` or a tool like Postman. Note that these examples use the ports for the manual setup (`5297` and `5296`):
 
 ```bash
 # Get vehicle details for a specific car

@@ -4,7 +4,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       - ACCEPT_EULA=Y
-      - 'SA_PASSWORD=yourStrong(!)Password'
+      - 'SA_PASSWORD=YourStrong!Passw0rd'
     ports:
       - "1433:1433"
     healthcheck:
@@ -23,7 +23,7 @@ services:
       sql-server:
         condition: service_healthy
     environment:
-      - ConnectionStrings__Default=Server=sql-server;Database=VehicleDb;User Id=sa;Password=yourStrong(!)Password;TrustServerCertificate=True;
+      - ConnectionStrings__Default=Server=sql-server;Database=VehicleDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;
 
   # Insurance Database Migrator
   insurance-db-migrator:
@@ -34,7 +34,7 @@ services:
       sql-server:
         condition: service_healthy
     environment:
-      - ConnectionStrings__Default=Server=sql-server;Database=InsuranceDb;User Id=sa;Password=yourStrong(!)Password;TrustServerCertificate=True;
+      - ConnectionStrings__Default=Server=sql-server;Database=InsuranceDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;
 
   # Vehicle Service
   vehicle-service:
@@ -45,7 +45,7 @@ services:
     ports:
       - "5081:8080"
     environment:
-      - 'ConnectionStrings__Default=Server=sql-server;Database=VehicleDb;User Id=sa;Password=yourStrong(!)Password;TrustServerCertificate=True;'
+      - 'ConnectionStrings__Default=Server=sql-server;Database=VehicleDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;'
       - ASPNETCORE_URLS=http://0.0.0.0:8080
     healthcheck:
       test: [ "CMD-SHELL", "curl -fsS http://localhost:8080/healthz || exit 1" ]
@@ -68,7 +68,7 @@ services:
       vehicle-service:
         condition: service_healthy
     environment:
-      - 'ConnectionStrings__Default=Server=sql-server;Database=InsuranceDb;User Id=sa;Password=yourStrong(!)Password;TrustServerCertificate=True;'
+      - 'ConnectionStrings__Default=Server=sql-server;Database=InsuranceDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True;'
       - VehicleService__BaseUrl=http://vehicle-service:8080
       - ASPNETCORE_URLS=http://0.0.0.0:8080
     healthcheck:
