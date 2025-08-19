@@ -5,13 +5,12 @@ WORKDIR /app
 # Copy solution and all project files to restore dependencies
 COPY ThreadPilot.sln .
 COPY src/ ./src/
-COPY tests/ ./tests/
 
 # Restore all dependencies for the solution
 RUN dotnet restore ThreadPilot.sln
 
 # Set the working directory to the migration project
-WORKDIR /app/src/Vehicle.Db
+WORKDIR /app/src/Vehicle/Vehicle.Db
 
 # The entrypoint will run the migration. The connection string is passed via environment variables.
 ENTRYPOINT ["dotnet", "run"]
