@@ -24,7 +24,12 @@ public class VehicleServiceClient : IVehicleServiceClient
         }
 
         var response = await _httpClient.PostAsJsonAsync("/api/v1/vehicles/batch", registrationNumbers);
-        
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return [];
+        }
+
         response.EnsureSuccessStatusCode();
 
         var vehicles = await response.Content.ReadFromJsonAsync<Vehicle.Service.Contracts.Vehicle[]>();
