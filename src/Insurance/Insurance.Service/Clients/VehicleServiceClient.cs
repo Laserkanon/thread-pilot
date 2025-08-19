@@ -1,3 +1,4 @@
+using System.Net;
 using Insurance.Service.Extensions;
 
 namespace Insurance.Service.Clients;
@@ -23,7 +24,7 @@ public class VehicleServiceClient : IVehicleServiceClient
         }
 
         var response = await _httpClient.PostAsJsonAsync("/api/v1/vehicles/batch", registrationNumbers);
-
+        
         response.EnsureSuccessStatusCode();
 
         var vehicles = await response.Content.ReadFromJsonAsync<Vehicle.Service.Contracts.Vehicle[]>();
