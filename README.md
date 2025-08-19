@@ -215,6 +215,8 @@ If I had more time, I would extend the solution by implementing a global excepti
 
 This section outlines potential enhancements to the solution, categorized for clarity.
 
+**NOTE: this list is not final and there are many additional things to consider.**
+
 ### Observability and Resilience
 -   **Structured Logging**: Implement structured logging (e.g., using Serilog) to create consistent, machine-readable log output. This would enable easier integration with log aggregation platforms like the ELK stack or Splunk.
 -   **Distributed Tracing**: Integrate a distributed tracing solution like OpenTelemetry to provide end-to-end visibility of requests as they travel across services, making it easier to diagnose latency and errors.
