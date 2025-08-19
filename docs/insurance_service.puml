@@ -1,0 +1,50 @@
+@startuml InsuranceService
+!theme plain
+
+title Insurance Service Architecture & Integration
+
+actor User
+
+package "Insurance.Service" {
+  [InsurancesController] as IController
+  [IInsuranceService] as IService
+  [InsuranceService] as Service
+  [IInsuranceRepository] as IRepo
+  [InsuranceRepository] as Repo
+  [IVehicleServiceClient] as IClient
+  [VehicleServiceClient] as Client
+  [IFeatureToggleService] as IFToggle
+  [FeatureToggleService] as FToggle
+  [Insurance] as InsuranceModel
+  [Vehicle] as VehicleModel
+  database "InsuranceDb" as Db
+  component "appsettings.json" as AppSettings
+}
+
+package "Vehicle.Service" as VehicleService {
+  [Vehicle Service API] as VehicleAPI
+}
+
+
+User -> IController
+
+IController -> IService : Uses
+IService <|.. Service : Implements
+Service -> IRepo : Uses
+Service -> IClient : Uses
+Service -> IFToggle : Uses
+IRepo <|.. Repo : Implements
+IClient <|.. Client : Implements
+IFToggle <|.. FToggle : Implements
+Repo -> Db : Queries
+FToggle -> AppSettings : Reads
+
+Client --> VehicleAPI : Makes HTTP call
+
+IController .> InsuranceModel
+Service .> InsuranceModel
+Repo .> InsuranceModel
+Service .> VehicleModel
+Client .> VehicleModel
+
+@enduml

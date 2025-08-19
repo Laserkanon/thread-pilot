@@ -1,0 +1,34 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    services:
+      mssql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: "YourStrong!Passw0rd"
+        ports: ["1433:1433"]
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrong!Passw0rd -C -Q 'SELECT 1'"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build
+        run: dotnet build -c Release
+
+      - name: Apply Vehicle DB Migrations
+        working-directory: ./src/Vehicle/Vehicle.Db
+        run: dotnet run --configuration Release -- --connection "Server=localhost,1433;Database=VehicleDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True"
+
+      - name: Apply Insurance DB Migrations
+        working-directory: ./src/Insurance/Insurance.Db
+        run: dotnet run --configuration Release -- --connection "Server=localhost,1433;Database=InsuranceDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True"
+
+      - name: Run Tests
+        run: dotnet test -c Release --no-build

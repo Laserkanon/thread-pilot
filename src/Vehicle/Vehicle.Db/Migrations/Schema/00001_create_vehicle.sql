@@ -1,0 +1,6 @@
+CREATE TABLE dbo.Vehicle (
+  RegistrationNumber VARCHAR(16) NOT NULL PRIMARY KEY,
+  Make  VARCHAR(50) NULL,
+  Model VARCHAR(50) NULL,
+  ModelYear SMALLINT NULL
+);
