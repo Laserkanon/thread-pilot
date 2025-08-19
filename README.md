@@ -213,4 +213,9 @@ This section outlines potential enhancements to the solution, categorized for cl
 -   **Automated E2E Regression Testing**: Establish a dedicated suite of end-to-end (E2E) regression tests that run against a fully deployed, production-like environment. This would provide the highest level of confidence that the entire system functions correctly as a whole.
 
 ### CI/CD and Deployment
+-   **Publish contracts and docker images**
 -   **Advanced Deployment Strategies**: Enhance the CI/CD pipeline to support advanced deployment strategies like **Blue-Green deployments** or **Canary Releases**. This would minimize downtime and risk during production releases.
+
+### Repository structure
+
+- **Consider mono vs seperation by bounded service**
