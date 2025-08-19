@@ -143,4 +143,62 @@ public class InsuranceServiceTests
         _mockVehicleServiceClient.Verify(c => c.GetVehiclesAsync(It.IsAny<string[]>()), Times.Never);
         result.First().VehicleDetails.Should().BeNull();
     }
+
+    [Fact]
+    public async Task GetInsurancesForPinAsync_WhenNoInsurancesFound_ShouldReturnEmptyList()
+    {
+        // Arrange
+        const string pin = "199001011234";
+        _mockInsuranceRepository.Setup(r => r.GetInsurancesByPinAsync(pin))
+            .ReturnsAsync(Array.Empty<Insurance.Service.Models.Insurance>());
+
+        // Act
+        var result = (await _insuranceService.GetInsurancesForPinAsync(pin)).ToList();
+
+        // Assert
+        result.Should().BeEmpty();
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesAsync(It.IsAny<string[]>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetInsurancesForPinAsync_WithNoCarInsurances_ShouldNotCallVehicleService()
+    {
+        // Arrange
+        const string pin = "199001011234";
+        var insuranceEntities = new Insurance.Service.Models.Insurance[]
+        {
+            new() { InsuranceId = 1, PersonalIdentityNumber = pin, Product = Service.Models.ProductType.Pet },
+            new() { InsuranceId = 2, PersonalIdentityNumber = pin, Product = Service.Models.ProductType.PersonalHealth }
+        };
+        _mockInsuranceRepository.Setup(r => r.GetInsurancesByPinAsync(pin)).ReturnsAsync(insuranceEntities);
+
+        // Act
+        var result = (await _insuranceService.GetInsurancesForPinAsync(pin)).ToList();
+
+        // Assert
+        result.Should().HaveCount(2);
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesAsync(It.IsAny<string[]>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public async Task GetInsurancesForPinAsync_WithCarInsuranceAndInvalidRegNr_ShouldNotCallVehicleService(string? registrationNumber)
+    {
+        // Arrange
+        const string pin = "199001011234";
+        var insuranceEntities = new Insurance.Service.Models.Insurance[]
+        {
+            new() { InsuranceId = 1, PersonalIdentityNumber = pin, Product = Service.Models.ProductType.Car, CarRegistrationNumber = registrationNumber }
+        };
+        _mockInsuranceRepository.Setup(r => r.GetInsurancesByPinAsync(pin)).ReturnsAsync(insuranceEntities);
+
+        // Act
+        var result = (await _insuranceService.GetInsurancesForPinAsync(pin)).ToList();
+
+        // Assert
+        result.Should().HaveCount(1);
+        result[0].VehicleDetails.Should().BeNull();
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesAsync(It.IsAny<string[]>()), Times.Never);
+    }
 }
