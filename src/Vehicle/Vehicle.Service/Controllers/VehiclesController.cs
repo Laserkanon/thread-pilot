@@ -11,12 +11,14 @@ public class VehiclesController : ControllerBase
 {
     private readonly IVehicleRepository _vehicleRepository;
     private readonly IValidator<string> _regValidator;
+    private readonly IValidator<string[]> _regListValidator;
 
     public VehiclesController(IVehicleRepository vehicleRepository,
-        IValidator<string> regValidator)
+        IValidator<string> regValidator, IValidator<string[]> regListValidator)
     {
         _vehicleRepository = vehicleRepository;
         _regValidator = regValidator;
+        _regListValidator = regListValidator;
     }
 
     [HttpGet("{registrationNumber}")]
@@ -45,9 +47,11 @@ public class VehiclesController : ControllerBase
     [HttpPost("batch")]
     public async Task<IActionResult> GetVehiclesBatch([FromBody] string[] registrationNumbers)
     {
-        if (registrationNumbers.Length == 0)
+        var validation = await _regListValidator.ValidateAsync(registrationNumbers);
+        
+        if (!validation.IsValid)
         {
-            return Ok(Enumerable.Empty<Contracts.Vehicle>());
+            return BadRequest(validation.Errors);
         }
 
         var vehicleEntities = await _vehicleRepository.GetVehiclesByRegistrationNumbersAsync(registrationNumbers);

@@ -3,6 +3,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Insurance.Service.Clients;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Moq.Protected;
 
@@ -24,7 +25,7 @@ public class VehicleServiceClientTests
         _mockConfiguration.Setup(c => c.GetSection("VehicleService:BaseUrl")).Returns(mockConfSection.Object);
 
         var httpClient = new HttpClient(_mockHttpMessageHandler.Object);
-        _client = new VehicleServiceClient(httpClient, _mockConfiguration.Object);
+        _client = new VehicleServiceClient(httpClient, _mockConfiguration.Object, NullLogger<VehicleServiceClient>.Instance);
     }
 
     [Fact]
