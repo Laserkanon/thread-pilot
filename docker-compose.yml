@@ -1,26 +1,24 @@
-version: '3.8'
-
 services:
   # SQL Server Database
   sql-server:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
       - ACCEPT_EULA=Y
-      - SA_PASSWORD=yourStrong(!)Password
+      - 'SA_PASSWORD=yourStrong(!)Password'
     ports:
       - "1433:1433"
     healthcheck:
-      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P 'yourStrong(!)Password' -Q 'SELECT 1' || exit 1"]
+      test: [ "CMD-SHELL", "grep -q 'SQL Server is now ready for client connections' /var/opt/mssql/log/errorlog || exit 1" ]
       interval: 10s
-      retries: 10
-      start_period: 10s
-      timeout: 3s
+      retries: 30
+      start_period: 60s
+      timeout: 5s
 
   # Vehicle Database Migrator
   vehicle-db-migrator:
     build:
       context: .
-      dockerfile: src/Vehicle.Db/Dockerfile
+      dockerfile: src/Vehicle/Vehicle.Db/Dockerfile
     depends_on:
       sql-server:
         condition: service_healthy
@@ -31,7 +29,7 @@ services:
   insurance-db-migrator:
     build:
       context: .
-      dockerfile: src/Insurance.Db/Dockerfile
+      dockerfile: src/Insurance/Insurance.Db/Dockerfile
     depends_on:
       sql-server:
         condition: service_healthy
@@ -42,17 +40,15 @@ services:
   vehicle-service:
     build:
       context: .
-      dockerfile: src/Vehicle.Service/Dockerfile
+      dockerfile: src/Vehicle/Vehicle.Service/Dockerfile
+      target: dev
     ports:
-      - "5081:8080" # Map container port 8080 to host port 5081
-    depends_on:
-      vehicle-db-migrator:
-        condition: service_completed_successfully
+      - "5081:8080"
     environment:
-      - ConnectionStrings__Default=Server=sql-server;Database=VehicleDb;User Id=sa;Password=yourStrong(!)Password;TrustServerCertificate=True;
-      - ASPNETCORE_HTTP_PORTS=8080
+      - 'ConnectionStrings__Default=Server=sql-server;Database=VehicleDb;User Id=sa;Password=yourStrong(!)Password;TrustServerCertificate=True;'
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:8080/healthz || exit 1" ]
       interval: 10s
       retries: 5
       start_period: 5s
@@ -62,20 +58,21 @@ services:
   insurance-service:
     build:
       context: .
-      dockerfile: src/Insurance.Service/Dockerfile
+      dockerfile: src/Insurance/Insurance.Service/Dockerfile
+      target: dev
     ports:
-      - "5082:8080" # Map container port 8080 to host port 5082
+      - "5082:8080"
     depends_on:
       insurance-db-migrator:
         condition: service_completed_successfully
       vehicle-service:
         condition: service_healthy
     environment:
-      - ConnectionStrings__Default=Server=sql-server;Database=InsuranceDb;User Id=sa;Password=yourStrong(!)Password;TrustServerCertificate=True;
+      - 'ConnectionStrings__Default=Server=sql-server;Database=InsuranceDb;User Id=sa;Password=yourStrong(!)Password;TrustServerCertificate=True;'
       - VehicleService__BaseUrl=http://vehicle-service:8080
-      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_URLS=http://0.0.0.0:8080
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/healthz || exit 1"]
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:8080/healthz || exit 1" ]
       interval: 10s
       retries: 5
       start_period: 5s

@@ -1,3 +1,4 @@
+using System.Net;
 using Insurance.Service.Extensions;
 
 namespace Insurance.Service.Clients;
