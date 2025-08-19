@@ -54,7 +54,7 @@ public class InsuranceService : IInsuranceService
             .ToArray();
 
         var vehicleDetails = await _vehicleServiceClient.GetVehiclesAsync(registrationNumbers);
-        var vehicleDict = vehicleDetails.ToDictionary(v => v.RegistrationNumber!);
+        var vehicleDict = vehicleDetails.ToDictionary(v => v.RegistrationNumber);
 
         foreach (var insurance in carInsurances)
         {
