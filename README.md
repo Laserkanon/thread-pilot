@@ -205,9 +205,14 @@ A good example of a necessary human correction was in solving the N+1 problem wh
 
 ## 5. Personal Reflection
 
-I have prior experience architecting and building .NET-based microservice solutions, which informed the patterns used in this project. The most interesting challenge was balancing the assignment's requirements with industry best practices for a production-ready system. For instance, I chose Dapper for its performance benefits and implemented a robust, batched call to the vehicle service, anticipating the need for efficiency at scale.
+Any similar project or experience you’ve had in the past:
+Yes, I recognize the issues in this assignment and the complexity they bring. It’s quite rare to get the opportunity to build everything from scratch, which really highlights the importance of strong platform libraries and how much they can accelerate development. (When you see whats left out)
 
-If I had more time, I would extend the solution by implementing a global exception handling middleware to standardize error responses further, add distributed tracing (e.g., with OpenTelemetry) for better observability across services, and expand the test suite with contract testing to formally enforce the API specifications between the services.
+What was challenging or interesting in this assignment:
+I have experience building services with REST call dependencies in critical systems. One challenge is fetching batch-related data from a service—it’s easy to overlook potential issues. A common mitigation is denormalizing data over a queue and storing related data locally, though this introduces additional complexity. Another approach can be for the the client poll/stream instead of keeping the HttpClient waiting, to let the server getg a chance to prepare the data.
+
+What you would improve or extend if you had more time:
+I would focus on writing more tests. I’d also prioritize setting up a CI/CD pipeline for publishing Docker images and related NuGet packages as the next steps. Beyond that, I’ve left a non-complete list of further improvements to consider.
 
 ---
 
