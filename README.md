@@ -1,112 +1,193 @@
 # ThreadPilot Integration Layer
 
-This repository contains the solution for the ThreadPilot integration layer assignment. It consists of two microservices, two databases, and a suite of tests, designed to demonstrate a clean, maintainable, and extensible architecture for integrating with legacy systems.
+This repository contains the solution for the ThreadPilot integration layer assignment. The project demonstrates a robust, maintainable, and scalable approach to integrating a new core system with legacy systems using a microservice architecture in .NET.
 
-## 1. Architecture and Design
+It consists of two primary services:
+-   **`Vehicle.Service`**: Manages and provides data about vehicles.
+-   **`Insurance.Service`**: Manages insurance policies and integrates with `Vehicle.Service` to provide enriched data.
 
-The solution follows a distributed, service-oriented architecture, with each service having its own distinct responsibility and database. This promotes separation of concerns, independent deployment, and scalability.
+This document provides a comprehensive overview of the architecture, setup instructions, and key design decisions.
 
--   **`Vehicle.Service`**: A microservice responsible for providing vehicle information. It has a single-table database (`VehicleDb`) and exposes a REST API for retrieving vehicle data.
--   **`Insurance.Service`**: A microservice responsible for providing insurance information for a given person. It integrates with `Vehicle.Service` to enrich car insurance policies with vehicle details. It has its own database (`InsuranceDb`).
--   **Database Migrations**: Two console applications, `Vehicle.Db` and `Insurance.Db`, use the **DbUp** library to manage database schema and seed data. This ensures that database changes are version-controlled, repeatable, and easy to apply in any environment.
--   **Data Access**: The repositories use **Dapper**, a high-performance and lightweight micro-ORM, for database queries. This avoids the overhead of a full ORM like Entity Framework while still providing a clean way to map query results to C# objects.
--   **Service Layer**: The core business logic in `Insurance.Service` is handled by an `InsuranceService` class. This class is responsible for fetching data from its own repository and then calling the `Vehicle.Service` to enrich the data. This keeps the controller thin and the logic testable. A key performance consideration here is that it makes **one single batch call** to `Vehicle.Service` for all car insurances, avoiding the N+1 query problem.
+---
 
-### Visual Diagrams
+## 1. Architecture and Design Decisions
 
-The architecture of each service is visualized in the PlantUML diagrams below.
+The solution is built using a distributed microservice architecture to ensure a clear separation of concerns, independent scalability, and deployment flexibility.
 
--   [Vehicle Service Diagram](docs/vehicle_service.puml)
--   [Insurance Service Diagram](docs/insurance_service.puml)
+### 1.1. Microservice Architecture
 
-## 2. Running and Testing the Solution Locally
+-   **`Vehicle.Service`**: A focused microservice that exposes a REST API for vehicle data. It has its own dedicated database, managed by **DbUp**.
+-   **`Insurance.Service`**: A microservice that provides insurance information for individuals. It performs internal orchestration by calling `Vehicle.Service` to enrich car insurance policies with vehicle details.
+
+### 1.2. Performance: Solving the N+1 Problem
+
+A critical design consideration was ensuring performant integration between services, especially when fetching vehicle details for multiple car insurances. To avoid the classic "N+1 query" problem, the `InsuranceService` is explicitly designed to be efficient by making a **single, batched API call**:
+1.  It retrieves all insurances for a given person.
+2.  It gathers all unique `CarRegistrationNumber` values from the policies.
+3.  It sends **one** request to `Vehicle.Service` with all registration numbers.
+4.  It maps the results back to the corresponding insurance policies in memory.
+
+This efficient approach ensures that even if a person has many car insurances, the system load remains minimal.
+
+### 1.3. Dependency Injection (DI)
+
+The project uses the standard, built-in .NET dependency injection container. The setup is clean, straightforward, and configured directly in `Program.cs`, following modern .NET best practices. There are no custom or "old-fashioned" DI frameworks or installers.
+
+*Example from `Insurance.Service/Program.cs`:*
+```csharp
+// Domain services
+builder.Services.AddScoped<IInsuranceRepository, InsuranceRepository>();
+builder.Services.AddScoped<IInsuranceService, InsuranceService>();
+
+// HTTP Client for Vehicle Service
+builder.Services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>();
+```
+
+### 1.4. Data Access
+
+**Dapper** was chosen as the micro-ORM for data access. It offers high performance and a lightweight abstraction over raw ADO.NET without the complexity of a full ORM like Entity Framework, which was deemed unnecessary for this project's scope. Database migrations are handled by **DbUp**, ensuring version-controlled and repeatable schema changes.
+
+### 1.5. Input Validation
+
+**FluentValidation** is used for validating API inputs. This choice promotes a clean and unified approach to validation logic, separating it from the core business logic of the controllers and services. It provides a robust way to define complex validation rules and results in a clear separation of concerns.
+
+### 1.6. Shared Contracts
+
+The solution uses dedicated `.Contracts` projects (e.g., `Insurance.Service.Contracts`) to define the public data models (Data Transfer Objects or DTOs) that are shared between services. This is a critical architectural pattern for several reasons:
+
+-   **Explicit Public Interface**: It creates a clear separation between the service's internal data models (how data is stored in the database) and its public contract (how data is exposed to the outside world). This prevents accidentally exposing internal fields or implementation details, which is important for both security and maintainability.
+-   **Improved Developer Experience (DX)**: When a developer needs to change an internal data model, the compiler will force them to consider how that change impacts the public contract, as the mapping will need to be updated. This makes refactoring safer and prevents unintended breaking changes.
+-   **Service Decoupling**: A service (like `Insurance.Service`) can consume the contract of another service (`Vehicle.Service.Contracts`) without needing a dependency on its full implementation, reducing coupling and improving build times.
+-   **Clear Versioning**: By having the API contract defined in a separate assembly, it becomes easier to manage versioning and support multiple versions of a contract simultaneously in the future.
+
+---
+
+## 2. How to Run and Test Locally
 
 ### Prerequisites
 
 -   .NET 8 SDK
--   SQL Server (LocalDB is sufficient)
--   A REST client like `curl` or Postman.
+-   Docker and Docker Compose
 
-### Steps to Run
+### Option A: Docker Compose (Recommended)
+
+This is the simplest way to get the entire solution running, as it handles database setup and service configuration automatically.
+
+1.  **Clone the repository.**
+2.  **Run Docker Compose from the root directory:**
+    ```bash
+    docker-compose up --build
+    ```
+    This command will:
+    -   Build the service images.
+    -   Start containers for both services and their SQL Server databases.
+    -   Automatically run the database migrations to set up the schema and seed data.
+
+### Option B: Manual Setup (without Docker)
+
+If you prefer to run the services directly on your machine:
 
 1.  **Clone the repository.**
 2.  **Set up the databases:**
-    Open a terminal in the root of the project and run the DbUp console applications. This will create the databases and apply the latest schema and seed data.
-    ```bash
-    # Update connection strings in src/Vehicle.Db/appsettings.json and src/Insurance.Db/appsettings.json if needed.
-
-    dotnet run --project src/Vehicle.Db
-    dotnet run --project src/Insurance.Db
-    ```
+    -   Ensure you have a local SQL Server instance running.
+    -   Update the connection strings in `src/Vehicle.Db/appsettings.json` and `src/Insurance.Db/appsettings.json`.
+    -   Run the DbUp console applications to create and seed the databases:
+        ```bash
+        dotnet run --project src/Vehicle.Db
+        dotnet run --project src/Insurance.Db
+        ```
 3.  **Start the services:**
-    Open two separate terminals.
+    Open two separate terminals and run the following commands. The ports are configured in `launchSettings.json` and should not conflict.
     ```bash
-    # In terminal 1
+    # In terminal 1: Start the Vehicle Service
     dotnet run --project src/Vehicle.Service
+    # Service will be available at http://localhost:5297
 
-    # In terminal 2
+    # In terminal 2: Start the Insurance Service
     dotnet run --project src/Insurance.Service
-    ```
-    The services will be available at:
-    -   `Vehicle.Service`: `http://localhost:5081`
-    -   `Insurance.Service`: `http://localhost:5082`
-
-4.  **Verify the endpoints:**
-    ```bash
-    # Get vehicle details
-    curl http://localhost:5081/api/v1/vehicles/ABC123
-
-    # Get insurances for a person (which in turn calls the vehicle service)
-    curl http://localhost:5082/api/v1/insurances/199001011234
+    # Service will be available at http://localhost:5296
     ```
 
-### How to Run Tests
+### Verifying the Endpoints
 
-Run all unit and integration tests from the root directory:
+When you run the services locally, a Swagger UI page should automatically open in your browser. This interface allows you to explore and test the API endpoints interactively.
+
+Alternatively, you can use `curl` or a tool like Postman:
+
+```bash
+# Get vehicle details for a specific car
+curl http://localhost:5297/api/v1/vehicles/ABC123
+
+# Get all insurances for a person (which in turn calls the vehicle service)
+curl http://localhost:5296/api/v1/insurances/199001011234
+```
+
+### Running Tests
+
+You can run all unit and integration tests for the entire solution by executing the following command from the root directory:
 ```bash
 dotnet test
 ```
+Alternatively, you can target a specific test project to run its tests in isolation (e.g., `dotnet test src/Insurance/Insurance.UnitTests`).
 
-## 3. Technical Approach
+---
+
+## 3. Technical Approach Details
+
+### Testing Strategy
+
+The solution includes both unit and integration tests to ensure correctness and stability.
+-   **Unit Tests**: These focus on testing individual components in isolation. For example, the `InsuranceService` unit tests mock both the database repository and the `IVehicleServiceClient` to verify the service's logic without making real HTTP calls or database queries. This is a standard practice to ensure tests are fast, focused, and completely isolated from external dependencies.
+-   **Integration Tests**: These tests verify the interaction between the `Insurance.Service` and its direct dependencies. The current suite focuses on the critical integration with `Vehicle.Service`. It launches both services and a real test database, then makes an actual HTTP call from `Insurance.Service` to `Vehicle.Service` to ensure the end-to-end data flow for enrichment is correct. In this scenario, no mocking is used for the core components being tested together.
 
 ### Error Handling
 
--   **Invalid Input**: API inputs are validated using **FluentValidation**. If validation fails, the API returns a `400 Bad Request` with a list of validation errors. This is handled in the controller for the insurance service and via middleware for the vehicle service's batch endpoint.
--   **Missing Data**: If a requested resource (like a vehicle or a person's insurances) is not found, the API gracefully returns a `404 Not Found` status code. The orchestrator is designed to handle cases where a vehicle for a car insurance policy is not found in the `Vehicle.Service`, simply leaving the `VehicleDetails` property as null.
--   **Service Unavailability**: The `VehicleServiceClient` uses `HttpClient`, which will throw an `HttpRequestException` if the `Vehicle.Service` is unavailable. In a production scenario, this would be caught by a global exception handler middleware to return a `503 Service Unavailable` response.
+-   **Invalid Input (`400 Bad Request`)**: API inputs are validated using **FluentValidation**. If validation fails, the API returns a `400` response with clear error messages.
+-   **Missing Data (`404 Not Found`)**: If a resource like a vehicle or a person's insurance profile is not found, the API returns a `404`.
+-   **Graceful Degradation**: If the `Vehicle.Service` is called for a specific car insurance policy but does not find a matching vehicle, it returns `null` for that vehicle's details. This is a **deliberate design choice** to ensure that the entire request for a person's insurances doesn't fail just because one vehicle record is missing. The system gracefully degrades rather than failing completely.
 
-### Extensibility
+### Extensibility and API Versioning
 
--   **Service-Oriented Architecture**: New services can be added to the solution without impacting existing ones.
--   **Repository Pattern**: The use of repositories abstracts the data access logic. If the underlying database technology were to change, only the repository implementation would need to be updated.
--   **API Versioning**: The APIs are versioned from the start (`/api/v1/...`). This allows for future changes and new versions of the API to be introduced without breaking existing clients.
+-   The service-oriented architecture allows new services to be added with minimal impact on existing ones.
+-   The use of repository and service abstractions makes it easier to modify or replace implementations (e.g., swapping out the database).
+-   All APIs are versioned from the start (`/api/v1/...`) to allow for future, non-breaking changes.
 
-### Security
+---
 
--   **Connection Strings**: Connection strings are stored in `appsettings.json` and should be moved to a secure secret management system (like Azure Key Vault or HashiCorp Vault) in a production environment.
--   **Input Validation**: All API inputs are validated to prevent common vulnerabilities like injection attacks and oversized payloads.
--   **HTTPS**: The services are configured to use HTTPS redirection.
-
-## 4. Onboarding and CI/CD
-
-### Onboarding
-
-To enable other developers to work on this solution, they would need to:
-1.  Read this `README.md` to understand the architecture and setup.
-2.  Ensure they have the prerequisites installed (.NET 8 SDK, SQL Server).
-3.  Run the database projects first to set up their local databases.
-4.  Run the services and tests as described above.
-The solution is structured cleanly into `src` and `tests` directories, with each project having a clear responsibility, making it easy to navigate.
+## 4. CI/CD and Developer Onboarding
 
 ### CI/CD Pipeline
 
-A basic CI pipeline is defined in `.github/workflows/ci.yml`. This GitHub Actions workflow will:
-1.  Trigger on every push or pull request.
-2.  Set up a SQL Server instance using a service container.
-3.  Build the solution.
-4.  Run the DbUp projects to apply migrations to the test database.
-5.  Run all the unit and integration tests.
+A basic Continuous Integration (CI) pipeline is defined in `.github/workflows/ci.yml`. This GitHub Actions workflow triggers on every push and pull request to automatically build the solution, run the tests, and ensure the codebase remains in a healthy state.
+
+### Onboarding New Developers
+
+A new developer can get started by:
+1.  Cloning the repository.
+2.  Ensuring prerequisites are installed (.NET 8, Docker).
+3.  Reading this `README.md` to understand the project structure and design.
+4.  Running `docker-compose up --build` to get a fully working local environment in a single step.
+
+### AI-Assisted Development
+
+Most of the code in this solution has been written by AI assistants, including ChatGPT-5 and the agent Google Jules. The developer's role was focused on performing critical reviews, making architectural decisions, and identifying and fixing subtle issues that the AI was not able to see. The developer also performed manual programming when required.
+
+A good example of a necessary human correction was in solving the N+1 problem when calling the Vehicle service. An initial AI-generated solution proposed fetching vehicle data for each registration number individually and also missed applying a `Distinct()` operation on the list of registration numbers. While the speed and parallel work provided by AI were beneficial, human oversight was crucial for ensuring the final implementation was both correct and performant.
+
+---
 
 ## 5. Personal Reflection
 
-I have experience building distributed systems with .NET, often using a similar microservices approach with dedicated databases. The most interesting challenge in this assignment was adhering to the strict-minimal requirements while still building something robust. It forced me to make deliberate choices, like using Dapper for performance and simplicity over EF Core, and implementing a manual validation call in the controller to accommodate primitive type validation with FluentValidation. If I had more time, I would add a global exception handling middleware, implement distributed tracing for observability between the services, and use Testcontainers to spin up a real SQL Server instance for the integration tests to make them even more reliable.
+I have prior experience architecting and building .NET-based microservice solutions, which informed the patterns used in this project. The most interesting challenge was balancing the assignment's requirements with industry best practices for a production-ready system. For instance, I chose Dapper for its performance benefits and implemented a robust, batched call to the vehicle service, anticipating the need for efficiency at scale.
+
+If I had more time, I would extend the solution by implementing a global exception handling middleware to standardize error responses further, add distributed tracing (e.g., with OpenTelemetry) for better observability across services, and expand the test suite with contract testing to formally enforce the API specifications between the services.
+
+---
+
+## 6. Future Improvements
+
+-   **Refactor to latest C# features**: Update the code to use newer language constructs for improved readability and conciseness.
+-   **Global Exception Handling**: Implement a middleware to catch unhandled exceptions and provide consistent error responses.
+-   **Resilience Policies**: Use a library like Polly to add retry and circuit-breaker policies to the `HttpClient` for better resilience against transient network issues.
+-   **Containerized Integration Tests**: Use Testcontainers to spin up ephemeral database instances for integration tests, further isolating them from the local development environment.
+-   **Automated E2E Regression Testing**: Establish a dedicated suite of end-to-end (E2E) regression tests that run against a fully deployed, production-like environment. This would provide the highest level of confidence that the entire system functions correctly as a whole.
