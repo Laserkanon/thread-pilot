@@ -32,14 +32,14 @@ public class VehicleServiceClient : IVehicleServiceClient
         // Potential data discrepancy  
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
-            _logger.LogWarning("One or more registrations were not found. {registrationNumbers}", JsonSerializer.Serialize(registrationNumbers));
+            _logger.LogWarning("One or more registrations were not found. RegistrationNumbers: {RegistrationNumbers}", registrationNumbers);
             return [];
         }
 
         //TODO: Consider adding partial bad request handling of batch entries
         if (response.StatusCode == HttpStatusCode.BadRequest)
         {
-            _logger.LogWarning("One or more registrations were not in the correct format. {registrationNumbers}", JsonSerializer.Serialize(registrationNumbers));
+            _logger.LogWarning("One or more registrations were not in the correct format. RegistrationNumbers: {RegistrationNumbers}", registrationNumbers);
             return [];
         }
 
