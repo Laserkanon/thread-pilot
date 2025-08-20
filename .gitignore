@@ -419,3 +419,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Local secrets file, not to be committed
+secrets.local.json
