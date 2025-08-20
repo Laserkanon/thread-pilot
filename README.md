@@ -70,17 +70,17 @@ The solution uses dedicated `.Contracts` projects (e.g., `Insurance.Service.Cont
 -   PowerShell
 -   Docker and Docker Compose (if using the Docker-based setup)
 
-This project provides two ways to run the services locally: via Docker Compose (recommended for ease of use) or by running the .NET services directly on your machine.
+This project provides two ways to run the services locally: via Docker Compose (recommended for a simple, all-in-one setup) or by running the .NET services directly on your machine with HTTPS.
 
 ### Secret Management
 
 This project uses template files (`.env.template`, `secrets.local.json.template`) as a blueprint for the actual secret files (`.env`, `secrets.local.json`) that you will create locally. These template files are checked into source control to show other developers what secrets are needed, while the actual secret files are listed in `.gitignore` and should never be committed.
 
-Before you run the application, you need to configure the necessary secrets (like the database password). This project uses a unified approach to secret management. You only need to provide your password once in a local file, and a script will configure both the Docker and non-Docker environments for you.
+Before you run the application, you need to configure the necessary secrets (like the database password). You only need to provide your password once in a local file, and a script will configure it for both the Docker and non-Docker environments.
 
 1.  **Create the secrets file**: In the root of the repository, copy the template file `secrets.local.json.template` to a new file named `secrets.local.json`.
 
-2.  **Add your password** (Optional): Open `secrets.local.json` and replace the placeholder `"Passw0rd!123"` with your actual local SQL Server SA password.
+2.  **Add your password**: Open `secrets.local.json` and replace the placeholder `"Passw0rd!123"` with your actual local SQL Server SA password.
     ```json
     {
       "DB_SA_PASSWORD": "YourActualPassword!123"
@@ -89,7 +89,7 @@ Before you run the application, you need to configure the necessary secrets (lik
 
 3.  **Run the configuration script**: Open a terminal in the root of the repository and run the PowerShell script.
     ```powershell
-    ./configure-secrets.ps1
+    ./init.ps1
     ```
     This script will perform two actions:
     -   It will create a `.env` file in the root directory. This file is used by Docker Compose.
@@ -97,54 +97,45 @@ Before you run the application, you need to configure the necessary secrets (lik
 
 After completing these steps, you are ready to run the application using either of the options below.
 
-### Option A: Docker Compose (Recommended)
+### Option A: Docker Compose
 
-This is the simplest way to get the entire solution running, as it handles database setup and service configuration automatically.
+This is the simplest way to get the entire solution running, as it handles database setup and service configuration automatically. This setup uses plain HTTP for simplicity in local development.
 
 1.  **Ensure Docker Desktop is running.**
 2.  **Run Docker Compose:** From the root directory of the project, run:
     ```bash
-    docker-compose up --build
+    docker-compose -f docker-compose.local.yml up --build
     ```
-    This command will use the `.env` file you generated to:
+    This command will use the `docker-compose.local.yml` file and the `.env` file you generated to:
     -   Build the Docker images for each service.
     -   Start containers for the `Vehicle.Service`, `Insurance.Service`, and a shared SQL Server database.
     -   Automatically run database migrations to set up the required schemas and seed initial data.
 
-    You should see logs from all services in your terminal. Wait for the health checks to pass to ensure everything is running correctly.
-
 #### Verifying the Services with Docker
 
-Once the containers are running, you can verify that the services are operational. The services are exposed on the following ports:
+The services are exposed on the following HTTP ports:
 -   **`Vehicle.Service`**: `http://localhost:5081`
 -   **`Insurance.Service`**: `http://localhost:5082`
 
 You can use the interactive Swagger UI or `curl` to test the endpoints:
+-   **Vehicle Service Swagger UI**: [http://localhost:5081/swagger](http://localhost:5081/swagger)
+-   **Insurance Service Swagger UI**: [http://localhost:5082/swagger](http://localhost:5082/swagger)
 
--   **Vehicle Service**:
-    -   **Swagger UI**: [http://localhost:5081/swagger](http://localhost:5081/swagger)
-    -   **Example `curl`**:
-        ```bash
-        # Get vehicle details for a specific car
-        curl http://localhost:5081/api/v1/vehicles/ABC123
-        ```
-
--   **Insurance Service**:
-    -   **Swagger UI**: [http://localhost:5082/swagger](http://localhost:5082/swagger)
-    -   **Example `curl`**:
-        ```bash
-        # Get all insurances for a person (which in turn calls the vehicle service)
-        curl http://localhost:5082/api/v1/insurances/199001011234
-        ```
-
-### Option B: Manual Setup (without Docker)
+### Option B: Manual Setup
 
 If you prefer to run the services directly on your machine:
 
-1.  **Set up a local database**: Ensure you have a local SQL Server instance running that is accessible with the credentials you provided in the `secrets.local.json` file.
+1.  **Trust the .NET Development Certificate**: Run the following command once to set up and trust the local HTTPS development certificate.
+    ```bash
+    dotnet dev-certs https --trust
+    ```
+2.  **Set up a local database** You can run this to create a mssql container: `docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=YourActualPassword!123" -p 1433:1433 --name sqlserver  -d mcr.microsoft.com/mssql/server:2022-latest` or use a local SQL Server instance. Don't forget to provide the `secrets.local.json` password. 
 
-2.  **Run Database Migrations**:
-    The `configure-secrets.ps1` script has already set up the secrets for your local .NET environment. However, the database migration tools are simple console apps that don't use the full application host, so we need to pass the connection string directly.
+2.1 **Container**: 
+
+
+3.  **Run Database Migrations**:
+    The `init.ps1` script has already set up the secrets for your local .NET environment. However, the database migration tools are simple console apps that don't use the full application host, so we need to pass the connection string directly.
     ```bash
     # Apply Vehicle DB Migrations
     dotnet run --project src/Vehicle/Db -- --connection "Server=localhost,1433;Database=VehicleDb;User Id=sa;Password=YourActualPassword!;TrustServerCertificate=True"
@@ -154,28 +145,24 @@ If you prefer to run the services directly on your machine:
     ```
     *(Remember to replace `YourActualPassword!` with your actual password in the commands above)*.
 
-3.  **Start the services**:
-    Open two separate terminals and run the following commands. The services will use the secrets you configured with the script.
+4.  **Start the services**:
+    Open two separate terminals and run the following commands. The services will use the secrets you configured and will run on HTTPS.
     ```bash
     # In terminal 1: Start the Vehicle Service
     dotnet run --project src/Vehicle.Service
-    # Service will be available at http://localhost:5297
+    # Service will be available at https://localhost:7297
 
     # In terminal 2: Start the Insurance Service
     dotnet run --project src/Insurance.Service
-    # Service will be available at http://localhost:5296
+    # Service will be available at https://localhost:7296
     ```
 
 #### Verifying the Endpoints (Manual Setup)
 
-When you run the services locally, a Swagger UI page should automatically open in your browser. You can also use `curl` or a tool like Postman. Note that these examples use the ports for the manual setup (`5297` and `5296`):
-
-```bash
-# Get vehicle details for a specific car
-curl http://localhost:5297/api/v1/vehicles/ABC123
-
-# Get all insurances for a person (which in turn calls the vehicle service)
-curl http://localhost:5296/api/v1/insurances/199001011234
+When you run the services locally, a Swagger UI page should automatically open in your browser at the HTTPS endpoints:
+```
+- Vehicle Service: https://localhost:7297/swagger
+- Insurance Service: https://localhost:7296/swagger
 ```
 
 ### Running Tests
@@ -188,7 +175,25 @@ Alternatively, you can target a specific test project to run its tests in isolat
 
 ---
 
-## 3. Technical Approach Details
+## 3. Security and TLS Termination Strategy
+
+For the local development environment, this project prioritizes simplicity and ease of use to ensure developers can get up and running quickly.
+
+-   **When using Docker Compose**, the services run on plain **HTTP**. This is intentional, as it removes the complexity of managing SSL certificates for the Docker environment.
+-   **When running locally with `dotnet run`**, the services use the standard **ASP.NET Core HTTPS development certificates**.
+
+In a real-world **production environment**, you would not expose the services directly. Instead, you would implement **TLS Termination** at the edge of your network. This is typically handled by a reverse proxy, an API Gateway, or a load balancer (e.g., Nginx, YARP, Azure Application Gateway).
+
+This approach has several benefits:
+-   **Centralized TLS Management**: SSL certificates are managed in one place, simplifying deployment and renewal.
+-   **Improved Security**: The internal network traffic between the gateway and the services can be on plain HTTP within a secure, private network, reducing the attack surface.
+-   **Simplified Services**: The application services themselves do not need to be concerned with the complexities of certificate management.
+
+The goal of this repository is not to implement TLS termination, but rather to produce a container. The responsibility for TLS termination is packaged in a separate step/process.
+
+---
+
+## 4. Technical Approach Details
 
 ### Testing Strategy
 
@@ -230,7 +235,7 @@ A new developer can get started by:
 1.  Cloning the repository.
 2.  Ensuring prerequisites are installed (.NET 8, Docker).
 3.  Reading this `README.md` to understand the project structure and design.
-4.  Running `docker-compose up --build` to get a fully working local environment in a single step.
+4.  Running `docker-compose -f docker-compose.local.yml up --build` to get a fully working local environment in a single step.
 
 ### AI-Assisted Development
 

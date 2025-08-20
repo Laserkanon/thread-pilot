@@ -73,6 +73,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Only use HTTPS redirection if it's not explicitly disabled.
+// This is useful for running in a container behind a TLS-terminating reverse proxy.
+var disableHttpsRedirection = builder.Configuration.GetValue<bool>("DISABLE_HTTPS_REDIRECTION");
+if (!disableHttpsRedirection)
+{
+    app.UseHttpsRedirection();
+}
+
 app.MapPrometheusScrapingEndpoint();
 
 app.UseAuthorization();

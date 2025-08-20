@@ -47,6 +47,9 @@ services:
     environment:
       - 'ConnectionStrings__Default=Server=sql-server;Database=VehicleDb;User Id=sa;Password=${DB_SA_PASSWORD};TrustServerCertificate=True;'
       - ASPNETCORE_URLS=http://0.0.0.0:8080
+      # In a production environment, a reverse proxy (e.g., Nginx) would handle TLS termination.
+      # The container itself runs on HTTP, so we disable HTTPS redirection to prevent errors.
+      - DISABLE_HTTPS_REDIRECTION=true
     healthcheck:
       test: [ "CMD-SHELL", "curl -fsS http://localhost:8080/healthz || exit 1" ]
       interval: 10s
@@ -71,6 +74,9 @@ services:
       - 'ConnectionStrings__Default=Server=sql-server;Database=InsuranceDb;User Id=sa;Password=${DB_SA_PASSWORD};TrustServerCertificate=True;'
       - VehicleService__BaseUrl=http://vehicle-service:8080
       - ASPNETCORE_URLS=http://0.0.0.0:8080
+      # In a production environment, a reverse proxy (e.g., Nginx) would handle TLS termination.
+      # The container itself runs on HTTP, so we disable HTTPS redirection to prevent errors.
+      - DISABLE_HTTPS_REDIRECTION=true
     healthcheck:
       test: [ "CMD-SHELL", "curl -fsS http://localhost:8080/healthz || exit 1" ]
       interval: 10s

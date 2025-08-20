@@ -10,6 +10,17 @@
 #>
 
 $ErrorActionPreference = "Stop"
+
+# --- Configure Development Certificate ---
+Write-Host "Configuring .NET development certificate..."
+try {
+    dotnet dev-certs https --trust
+    Write-Host "Development certificate configured successfully."
+}
+catch {
+    Write-Warning "Failed to configure the development certificate automatically. You may need to run 'dotnet dev-certs https --trust' manually with administrator privileges."
+}
+
 # In environments where $PSScriptRoot is not available, fall back to the current directory.
 if ($PSScriptRoot) {
     $executionRoot = $PSScriptRoot
