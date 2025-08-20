@@ -80,15 +80,24 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Check for changes in contracts
+        id: changes
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            contracts:
+              - 'src/Insurance/Insurance.Service.Contracts/**'
+              - 'src/Vehicle/Vehicle.Service.Contracts/**'
+
       - name: Pack and Push Main Branch Version
-        if: github.ref == 'refs/heads/main'
+        if: github.ref == 'refs/heads/main' && steps.changes.outputs.contracts == 'true'
         run: |
           dotnet pack src/Insurance/Insurance.Service.Contracts/Insurance.Service.Contracts.csproj -c Release -o ./packages
           dotnet pack src/Vehicle/Vehicle.Service.Contracts/Vehicle.Service.Contracts.csproj -c Release -o ./packages
           dotnet nuget push "./packages/*.nupkg" --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
 
       - name: Pack and Push Feature Branch Version
-        if: github.ref != 'refs/heads/main'
+        if: github.ref != 'refs/heads/main' && steps.changes.outputs.contracts == 'true'
         run: |
           # 1) Get branch ref name reliably (e.g., "feat/ci-nuget-publishing")
           BRANCH_NAME="${GITHUB_REF_NAME:-$(echo "$GITHUB_REF" | sed 's#.*/##')}"
