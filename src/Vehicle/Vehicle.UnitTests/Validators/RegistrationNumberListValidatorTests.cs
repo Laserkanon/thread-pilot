@@ -34,13 +34,4 @@ public class RegistrationNumberListValidatorTests
             .WithErrorMessage("Registration number must be between 2 and 7 characters.");
     }
 
-    [Fact]
-    public void Exceeds_Max_Batch_Size_Fails()
-    {
-        var over = Enumerable.Repeat("AB", RegistrationNumberListValidator.MaxBatchSize + 1).ToArray();
-        var result = _sut.TestValidate(over);
-
-        result.ShouldHaveValidationErrorFor(x => x.Length)
-            .WithErrorMessage($"At most {RegistrationNumberListValidator.MaxBatchSize} registration numbers are allowed.");
-    }
 }

@@ -1,5 +1,6 @@
 using FluentValidation;
 using Vehicle.Service.Repositories;
+using Vehicle.Service.Services;
 using Vehicle.Service.Validators;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
@@ -19,6 +20,7 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddScoped<IVehicleRepository, VehicleRepository>();
+builder.Services.AddScoped<IRegistrationNumberValidatorService, RegistrationNumberValidatorService>();
 
 // Add FluentValidation
 builder.Services.AddValidatorsFromAssemblyContaining<RegistrationNumberValidator>();
