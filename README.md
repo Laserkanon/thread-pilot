@@ -165,7 +165,7 @@ Alternatively, you can target a specific test project to run its tests in isolat
 
 The solution includes both unit and integration tests to ensure correctness and stability.
 -   **Unit Tests**: These focus on testing individual components in isolation. For example, the `InsuranceService` unit tests mock both the database repository and the `IVehicleServiceClient` to verify the service's logic without making real HTTP calls or database queries. This is a standard practice to ensure tests are fast, focused, and completely isolated from external dependencies.
--   **Integration Tests**: These tests verify the interaction between the `Insurance.Service` and its direct dependencies. The current suite focuses on the critical integration with `Vehicle.Service`. It launches both services and a real test database, then makes an actual HTTP call from `Insurance.Service` to `Vehicle.Service` to ensure the end-to-end data flow for enrichment is correct. In this scenario, no mocking is used for the core components being tested together.
+-   **Integration Tests**: These tests validate the interaction between Insurance.Service and its direct dependencies. They start up the service together with its test database, then perform a real HTTP call from Insurance.Service through to the database and back, ensuring the full end-to-end data flow works as expected. External microservice dependencies are mocked. While mocking isn’t strictly necessary, the author suggests introducing an additional, broader test project at a third level to keep these tests focused and fast, while still allowing more comprehensive scenarios to be verified separately without slowing down the core integration suite.
 
 ### Error Handling
 
