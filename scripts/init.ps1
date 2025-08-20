@@ -17,6 +17,24 @@ if ($PSScriptRoot) {
     $executionRoot = Get-Location
 }
 
+# --- Certificate Generation ---
+Write-Host "`nGenerating self-signed certificates for local development..."
+$certDir = Join-Path $executionRoot "nginx/certs"
+$certKey = Join-Path $certDir "localhost.key"
+$certFile = Join-Path $certDir "localhost.crt"
+
+if (-not (Test-Path $certDir)) {
+    New-Item -ItemType Directory -Path $certDir | Out-Null
+}
+
+if (-not (Test-Path $certKey) -or -not (Test-Path $certFile)) {
+    Write-Host "Certificates not found. Generating new self-signed certificates..."
+    openssl req -x509 -nodes -newkey rsa:2048 -keyout $certKey -out $certFile -sha256 -days 365 -subj "/CN=localhost"
+    Write-Host "Certificates generated successfully."
+} else {
+    Write-Host "Certificates already exist. Skipping generation."
+}
+
 $secretsFile = Join-Path $executionRoot "secrets.local.json"
 
 if (-not (Test-Path $secretsFile)) {

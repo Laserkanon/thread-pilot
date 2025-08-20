@@ -72,11 +72,11 @@ The solution uses dedicated `.Contracts` projects (e.g., `Insurance.Service.Cont
 
 This project provides two ways to run the services locally: via Docker Compose (recommended for ease of use) or by running the .NET services directly on your machine.
 
-### Secret Management
+### Setup and Configuration
 
 This project uses template files (`.env.template`, `secrets.local.json.template`) as a blueprint for the actual secret files (`.env`, `secrets.local.json`) that you will create locally. These template files are checked into source control to show other developers what secrets are needed, while the actual secret files are listed in `.gitignore` and should never be committed.
 
-Before you run the application, you need to configure the necessary secrets (like the database password). This project uses a unified approach to secret management. You only need to provide your password once in a local file, and a script will configure both the Docker and non-Docker environments for you.
+Before you run the application, you need to run a one-time setup script that configures secrets and generates a self-signed SSL certificate for local HTTPS development.
 
 1.  **Create the secrets file**: In the root of the repository, copy the template file `secrets.local.json.template` to a new file named `secrets.local.json`.
 
@@ -87,11 +87,12 @@ Before you run the application, you need to configure the necessary secrets (lik
     }
     ```
 
-3.  **Run the configuration script**: Open a terminal in the root of the repository and run the PowerShell script.
+3.  **Run the initialization script**: Open a terminal in the root of the repository and run the PowerShell script.
     ```powershell
-    ./configure-secrets.ps1
+    ./scripts/init.ps1
     ```
-    This script will perform two actions:
+    This script will perform three actions:
+    -   It will generate a self-signed SSL certificate in the `nginx/certs` directory, which is required for the reverse proxy to serve traffic over HTTPS.
     -   It will create a `.env` file in the root directory. This file is used by Docker Compose.
     -   It will use the .NET Secret Manager to configure secrets for local development (when not using Docker).
 
@@ -99,42 +100,41 @@ After completing these steps, you are ready to run the application using either 
 
 ### Option A: Docker Compose (Recommended)
 
-This is the simplest way to get the entire solution running, as it handles database setup and service configuration automatically.
+This is the simplest way to get the entire solution running, as it handles database setup, service configuration, and secure communication via a reverse proxy.
 
 1.  **Ensure Docker Desktop is running.**
 2.  **Run Docker Compose:** From the root directory of the project, run:
     ```bash
     docker-compose up --build
     ```
-    This command will use the `.env` file you generated to:
+    This command will use the `.env` file and the generated certificate to:
     -   Build the Docker images for each service.
-    -   Start containers for the `Vehicle.Service`, `Insurance.Service`, and a shared SQL Server database.
+    -   Start containers for the `Vehicle.Service`, `Insurance.Service`, a shared SQL Server database, and an Nginx reverse proxy.
+    -   The Nginx proxy will handle TLS termination, ensuring all external traffic is encrypted.
     -   Automatically run database migrations to set up the required schemas and seed initial data.
 
     You should see logs from all services in your terminal. Wait for the health checks to pass to ensure everything is running correctly.
 
 #### Verifying the Services with Docker
 
-Once the containers are running, you can verify that the services are operational. The services are exposed on the following ports:
--   **`Vehicle.Service`**: `http://localhost:5081`
--   **`Insurance.Service`**: `http://localhost:5082`
+Once the containers are running, you can verify that the services are operational. All traffic is routed through the Nginx reverse proxy over HTTPS.
 
-You can use the interactive Swagger UI or `curl` to test the endpoints:
+-   **Entry Point**: `https://localhost`
+
+You can use `curl` to test the endpoints. Note the `-k` flag is used to allow the self-signed certificate.
 
 -   **Vehicle Service**:
-    -   **Swagger UI**: [http://localhost:5081/swagger](http://localhost:5081/swagger)
     -   **Example `curl`**:
         ```bash
         # Get vehicle details for a specific car
-        curl http://localhost:5081/api/v1/vehicles/ABC123
+        curl -k https://localhost/vehicles/api/v1/vehicles/ABC123
         ```
 
 -   **Insurance Service**:
-    -   **Swagger UI**: [http://localhost:5082/swagger](http://localhost:5082/swagger)
     -   **Example `curl`**:
         ```bash
         # Get all insurances for a person (which in turn calls the vehicle service)
-        curl http://localhost:5082/api/v1/insurances/199001011234
+        curl -k https://localhost/insurance/api/v1/insurances/199001011234
         ```
 
 ### Option B: Manual Setup (without Docker)
