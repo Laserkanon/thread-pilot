@@ -63,3 +63,62 @@ jobs:
         with:
           name: code-coverage-report
           path: ./coverage/
+
+  publish-packages:
+    runs-on: ubuntu-latest
+    needs: build-test
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Pack and Push Main Branch Version
+        if: github.ref == 'refs/heads/main'
+        run: |
+          dotnet pack src/Insurance/Insurance.Service.Contracts/Insurance.Service.Contracts.csproj -c Release -o ./packages
+          dotnet pack src/Vehicle/Vehicle.Service.Contracts/Vehicle.Service.Contracts.csproj -c Release -o ./packages
+          dotnet nuget push "./packages/*.nupkg" --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+
+      - name: Pack and Push Feature Branch Version
+        if: github.ref != 'refs/heads/main'
+        run: |
+          # 1) Get branch ref name reliably (e.g., "feat/ci-nuget-publishing")
+          BRANCH_NAME="${GITHUB_REF_NAME:-$(echo "$GITHUB_REF" | sed 's#.*/##')}"
+
+          # 2) Sanitize for NuGet prerelease: keep a-z, 0-9 and hyphens only
+          #    - lower-case, replace anything else with '-'
+          #    - collapse repeated '-' and trim leading/trailing '-'
+          SANITIZED_BRANCH=$(echo "$BRANCH_NAME" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed 's/[^0-9a-z-]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//')
+
+          # Optional: keep it reasonably short to avoid 64-char version limit issues
+          SANITIZED_BRANCH=${SANITIZED_BRANCH:0:30}
+
+          PKG_SUFFIX="feat-${SANITIZED_BRANCH}.${GITHUB_RUN_NUMBER}"
+
+          # Vehicle.Service.Contracts
+          VEHICLE_BASE_VERSION=$(sed -n 's/.*<Version>\(.*\)<\/Version>.*/\1/p' \
+            src/Vehicle/Vehicle.Service.Contracts/Vehicle.Service.Contracts.csproj | tr -d '[:space:]')
+          VEHICLE_VERSION="${VEHICLE_BASE_VERSION}-${PKG_SUFFIX}"
+          echo "Packing Vehicle.Service.Contracts version $VEHICLE_VERSION"
+          dotnet pack src/Vehicle/Vehicle.Service.Contracts/Vehicle.Service.Contracts.csproj \
+            -c Release /p:PackageVersion="$VEHICLE_VERSION" -o ./packages
+
+          # Insurance.Service.Contracts
+          INSURANCE_BASE_VERSION=$(sed -n 's/.*<Version>\(.*\)<\/Version>.*/\1/p' \
+            src/Insurance/Insurance.Service.Contracts/Insurance.Service.Contracts.csproj | tr -d '[:space:]')
+          INSURANCE_VERSION="${INSURANCE_BASE_VERSION}-${PKG_SUFFIX}"
+          echo "Packing Insurance.Service.Contracts version $INSURANCE_VERSION"
+          dotnet pack src/Insurance/Insurance.Service.Contracts/Insurance.Service.Contracts.csproj \
+            -c Release /p:PackageVersion="$INSURANCE_VERSION" -o ./packages
+
+          # Push all
+          dotnet nuget push "./packages/*.nupkg" \
+            --api-key ${{ secrets.GITHUB_TOKEN }} \
+            --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
