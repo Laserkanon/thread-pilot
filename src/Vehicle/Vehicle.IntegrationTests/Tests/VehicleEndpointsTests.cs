@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using OpenTelemetry.Metrics;
 using Vehicle.IntegrationTests.TesHelpers;
 
 namespace Vehicle.IntegrationTests.Tests;
@@ -18,6 +19,7 @@ public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program
             builder.ConfigureServices(services =>
             {
                 services.AddScoped<ITestDataSeeder, TestDataSeeder>();
+                services.AddOpenTelemetry().WithMetrics(builder => builder.AddPrometheusExporter());
             });
         });
     }
@@ -55,5 +57,20 @@ public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetMetrics_ReturnsOkAndPrometheusContent()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/metrics");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("# TYPE http_server_request_duration_seconds histogram");
     }
 }

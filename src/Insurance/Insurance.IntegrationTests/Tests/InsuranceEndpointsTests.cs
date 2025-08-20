@@ -7,6 +7,7 @@ using Insurance.Service.Contracts;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using OpenTelemetry.Metrics;
 
 namespace Insurance.IntegrationTests.Tests;
 
@@ -28,6 +29,8 @@ public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Progr
                 
                 //Mock external service
                 services.AddScoped<IVehicleServiceClient>(_ => _mockVehicleClient.Object);
+
+                services.AddOpenTelemetry().WithMetrics(builder => builder.AddPrometheusExporter());
             });
         });
     }
@@ -81,5 +84,20 @@ public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Progr
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task GetMetrics_ReturnsOkAndPrometheusContent()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/metrics");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var content = await response.Content.ReadAsStringAsync();
+        content.Should().Contain("# TYPE http_server_request_duration_seconds histogram");
     }
 }
