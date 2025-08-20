@@ -7,7 +7,7 @@
 
     <!-- Properties for NuGet packaging -->
     <PackageId>ThreadPilot.Insurance.Service.Contracts</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.1.0</Version>
     <Authors>Jules</Authors>
     <Company>ThreadPilot</Company>
     <Description>Contracts for the ThreadPilot Insurance Service API.</Description>
