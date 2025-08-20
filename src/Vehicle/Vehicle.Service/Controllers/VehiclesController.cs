@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Vehicle.Service.Extensions;
 using Vehicle.Service.Repositories;
+using Vehicle.Service.Services;
 
 namespace Vehicle.Service.Controllers;
 
@@ -11,14 +12,15 @@ public class VehiclesController : ControllerBase
 {
     private readonly IVehicleRepository _vehicleRepository;
     private readonly IValidator<string> _regValidator;
-    private readonly IValidator<string[]> _regListValidator;
+    private readonly IRegistrationNumberValidatorService _registrationNumberValidatorService;
 
     public VehiclesController(IVehicleRepository vehicleRepository,
-        IValidator<string> regValidator, IValidator<string[]> regListValidator)
+        IValidator<string> regValidator,
+        IRegistrationNumberValidatorService registrationNumberValidatorService)
     {
         _vehicleRepository = vehicleRepository;
         _regValidator = regValidator;
-        _regListValidator = regListValidator;
+        _registrationNumberValidatorService = registrationNumberValidatorService;
     }
 
     [HttpGet("{registrationNumber}")]
@@ -47,19 +49,9 @@ public class VehiclesController : ControllerBase
     [HttpPost("batch")]
     public async Task<IActionResult> GetVehiclesBatch([FromBody] string[] registrationNumbers)
     {
-        var validation = await _regListValidator.ValidateAsync(registrationNumbers);
+        var validRegistrationNumbers = _registrationNumberValidatorService.Validate(registrationNumbers);
         
-        if (!validation.IsValid)
-        {
-            return BadRequest(validation.Errors);
-        }
-
-        var vehicleEntities = await _vehicleRepository.GetVehiclesByRegistrationNumbersAsync(registrationNumbers);
-
-        if (vehicleEntities.Length == 0)
-        {
-            return NotFound();
-        }
+        var vehicleEntities = await _vehicleRepository.GetVehiclesByRegistrationNumbersAsync(validRegistrationNumbers);
 
         // Map from the data models to the contract models
         var vehicleContracts = vehicleEntities.Select(x => x.MapToContracts());
