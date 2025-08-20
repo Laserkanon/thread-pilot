@@ -3,8 +3,18 @@ using Vehicle.Service.Repositories;
 using Vehicle.Service.Validators;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = new LoggerConfiguration()
+    .ReadFrom.Configuration(builder.Configuration)
+    .CreateBootstrapLogger();
+
+builder.Host.UseSerilog((context, services, configuration) => configuration
+    .ReadFrom.Configuration(context.Configuration)
+    .ReadFrom.Services(services)
+    .Enrich.FromLogContext());
 
 // Add services to the container.
 builder.Services.AddControllers();
