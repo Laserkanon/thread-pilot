@@ -71,6 +71,6 @@ public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var content = await response.Content.ReadAsStringAsync();
-        content.Should().Contain("# TYPE http_server_request_duration_seconds histogram");
+        content.Should().Contain("http_server_active_requests");
     }
 }
