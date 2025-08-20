@@ -28,22 +28,12 @@ public class VehicleServiceClient : IVehicleServiceClient
 
         var response = await _httpClient.PostAsJsonAsync("/api/v1/vehicles/batch", registrationNumbers);
 
-        //TODO: Consider adding partial not found identification of batch entries
-        // Potential data discrepancy  
-        if (response.StatusCode == HttpStatusCode.NotFound)
+        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
         {
-            _logger.LogWarning("One or more registrations were not found. RegistrationNumbers: {RegistrationNumbers}", registrationNumbers);
+            _logger.LogWarning("A non-successful status code {StatusCode} was received from the Vehicle Service. RegistrationNumbers: {RegistrationNumbers}", response.StatusCode, registrationNumbers);
             return [];
         }
 
-        //TODO: Consider adding partial bad request handling of batch entries
-        if (response.StatusCode == HttpStatusCode.BadRequest)
-        {
-            _logger.LogWarning("One or more registrations were not in the correct format. RegistrationNumbers: {RegistrationNumbers}", registrationNumbers);
-            return [];
-        }
-
-        //TODO: Consider fallback strategy if service is down.
         response.EnsureSuccessStatusCode();
 
         var vehicles = await response.Content.ReadFromJsonAsync<Vehicle.Service.Contracts.Vehicle[]>();

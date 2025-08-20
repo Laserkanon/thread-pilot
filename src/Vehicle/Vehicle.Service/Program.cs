@@ -68,4 +68,4 @@ app.Run();
 /// https://github.com/dotnet/AspNetCore.Docs/issues/23837
 ///  <InternalsVisibleTo Include="Vehicle.IntegrationTests" />
 /// </summary>
-public partial class Program { }
+public  partial class Program { }

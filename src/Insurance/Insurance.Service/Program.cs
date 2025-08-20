@@ -5,7 +5,9 @@ using Insurance.Service.Services;
 using Insurance.Service.Validators;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using Insurance.Service.Policies;
 using Serilog;
+using ILogger = Serilog.ILogger;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,7 +30,18 @@ builder.Services.AddScoped<IInsuranceService, InsuranceService>();
 builder.Services.AddScoped<IFeatureToggleService, FeatureToggleService>();
 
 // Http Client for Vehicle Service
-builder.Services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>();
+builder.Services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>()
+    .AddPolicyHandler((serviceProvider, _) =>
+    {
+        var logger = serviceProvider.GetRequiredService<ILogger>();
+        return HttpClientPolicies.GetFallbackPolicy(logger);
+    })
+    .AddPolicyHandler(HttpClientPolicies.GetRetryPolicy())
+    .AddPolicyHandler((serviceProvider, _) =>
+    {
+        var logger = serviceProvider.GetRequiredService<ILogger>();
+        return HttpClientPolicies.GetCircuitBreakerPolicy(logger);
+    });
 
 // Add FluentValidation
 builder.Services.AddScoped<IValidator<string>, PersonalIdentifyNumberValidator>();
