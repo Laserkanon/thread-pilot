@@ -97,7 +97,7 @@ Before you run the application, you need to configure the necessary secrets (lik
 
 After completing these steps, you are ready to run the application using either of the options below.
 
-### Option A: Docker Compose (Simple HTTP)
+### Option A: Docker Compose
 
 This is the simplest way to get the entire solution running, as it handles database setup and service configuration automatically. This setup uses plain HTTP for simplicity in local development.
 
@@ -121,15 +121,18 @@ You can use the interactive Swagger UI or `curl` to test the endpoints:
 -   **Vehicle Service Swagger UI**: [http://localhost:5081/swagger](http://localhost:5081/swagger)
 -   **Insurance Service Swagger UI**: [http://localhost:5082/swagger](http://localhost:5082/swagger)
 
-### Option B: Manual Setup (Local HTTPS)
+### Option B: Manual Setup
 
-If you prefer to run the services directly on your machine with HTTPS:
+If you prefer to run the services directly on your machine:
 
 1.  **Trust the .NET Development Certificate**: Run the following command once to set up and trust the local HTTPS development certificate.
     ```bash
     dotnet dev-certs https --trust
     ```
-2.  **Set up a local database**: Ensure you have a local SQL Server instance running that is accessible with the credentials you provided in the `secrets.local.json` file.
+2.  **Set up a local database** You can run this to create a mssql container: `docker run -e "ACCEPT_EULA=Y" -e "SA_PASSWORD=YourActualPassword!123" -p 1433:1433 --name sqlserver  -d mcr.microsoft.com/mssql/server:2022-latest` or use a local SQL Server instance. Don't forget to provide the `secrets.local.json` password. 
+
+2.1 **Container**: 
+
 
 3.  **Run Database Migrations**:
     The `init.ps1` script has already set up the secrets for your local .NET environment. However, the database migration tools are simple console apps that don't use the full application host, so we need to pass the connection string directly.
@@ -232,7 +235,7 @@ A new developer can get started by:
 1.  Cloning the repository.
 2.  Ensuring prerequisites are installed (.NET 8, Docker).
 3.  Reading this `README.md` to understand the project structure and design.
-4.  Running `docker-compose up --build` to get a fully working local environment in a single step.
+4.  Running `docker-compose -f docker-compose.local.yml up --build` to get a fully working local environment in a single step.
 
 ### AI-Assisted Development
 
