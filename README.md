@@ -179,6 +179,13 @@ The solution includes both unit and integration tests to ensure correctness and 
 -   The use of repository and service abstractions makes it easier to modify or replace implementations (e.g., swapping out the database).
 -   All APIs are versioned from the start (`/api/v1/...`) to allow for future, non-breaking changes.
 
+### Observability
+
+The solution includes basic observability features out of the box.
+
+-   **Health Checks**: Both services expose a standard health check endpoint at `/healthz`. This can be used by container orchestration systems like Kubernetes or service meshes to automatically manage application health.
+-   **Application Metrics**: Both services use **OpenTelemetry** to expose a wide range of application metrics in a **Prometheus**-compatible format. This includes standard metrics for HTTP requests (e.g., duration, count, status codes) and HttpClient calls. The metrics are available on the `/metrics` endpoint of each service and can be scraped by a Prometheus server for monitoring and alerting.
+
 ---
 
 ## 4. CI/CD and Developer Onboarding
@@ -226,7 +233,6 @@ This section outlines potential enhancements to the solution, categorized for cl
 -   **Structured Logging**: Implement structured logging (e.g., using Serilog) to create consistent, machine-readable log output. This would enable easier integration with log aggregation platforms like the ELK stack or Splunk.
 -   **Distributed Tracing**: Integrate a distributed tracing solution like OpenTelemetry to provide end-to-end visibility of requests as they travel across services, making it easier to diagnose latency and errors.
 -   **Expanded Resilience Policies**: Enhance the existing resilience strategy by adding more advanced patterns from libraries like **Polly**. This includes implementing **Retry** policies for transient failures, **Circuit Breakers** to prevent cascading failures, and patterns like **Bulkhead** isolation and **Rate Limiting** to protect services from being overwhelmed.
--   **Health Checks and Metrics**: Implement detailed health check endpoints (`/health`) that report the status of downstream dependencies (like databases). Expose application metrics (e.g., request rates, error percentages) in a Prometheus format for monitoring and alerting.
 
 ### Architecture and Design
 -   **Event-Driven Architecture**: Explore evolving the architecture to incorporate asynchronous messaging (e.g., with RabbitMQ or Kafka). This would decouple services further and enable patterns like **CQRS** and **Sagas** for more complex workflows.

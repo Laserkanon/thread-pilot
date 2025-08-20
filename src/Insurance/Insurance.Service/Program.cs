@@ -3,6 +3,8 @@ using Insurance.Service.Clients;
 using Insurance.Service.Repositories;
 using Insurance.Service.Services;
 using Insurance.Service.Validators;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,6 +30,16 @@ builder.Services.AddSwaggerGen();
 // Add health checks
 builder.Services.AddHealthChecks();
 
+// Add OpenTelemetry
+builder.Services.AddOpenTelemetry()
+    .WithMetrics(meterProviderBuilder =>
+        meterProviderBuilder
+            .ConfigureResource(resource => resource
+                .AddService(serviceName: builder.Environment.ApplicationName))
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddPrometheusExporter());
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -36,6 +48,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.MapPrometheusScrapingEndpoint();
 
 app.UseAuthorization();
 
