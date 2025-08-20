@@ -31,4 +31,10 @@ jobs:
         run: dotnet run --configuration Release -- --connection "Server=localhost,1433;Database=InsuranceDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True"
 
       - name: Run Tests
-        run: dotnet test -c Release --no-build
+        run: dotnet test -c Release --no-build --collect:"XPlat Code Coverage" --results-directory ./coverage/
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: ./coverage/
