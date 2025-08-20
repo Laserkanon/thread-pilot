@@ -7,7 +7,7 @@
 
     <!-- Properties for NuGet packaging -->
     <PackageId>ThreadPilot.Vehicle.Service.Contracts</PackageId>
-    <Version>1.0.0</Version>
+    <Version>1.1.1</Version>
     <Authors>Jules</Authors>
     <Company>ThreadPilot</Company>
     <Description>Contracts for the ThreadPilot Vehicle Service API.</Description>
