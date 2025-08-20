@@ -8,10 +8,10 @@ jobs:
         image: mcr.microsoft.com/mssql/server:2022-latest
         env:
           ACCEPT_EULA: Y
-          SA_PASSWORD: "YourStrong!Passw0rd"
+          SA_PASSWORD: "${{ secrets.SA_PASSWORD }}"
         ports: ["1433:1433"]
         options: >-
-          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P YourStrong!Passw0rd -C -Q 'SELECT 1'"
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $SA_PASSWORD -C -Q 'SELECT 1'"
           --health-interval 10s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
@@ -24,14 +24,39 @@ jobs:
 
       - name: Apply Vehicle DB Migrations
         working-directory: ./src/Vehicle/Vehicle.Db
-        run: dotnet run --configuration Release -- --connection "Server=localhost,1433;Database=VehicleDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True"
+        run: dotnet run --configuration Release -- --connection "Server=localhost,1433;Database=VehicleDb;User Id=sa;Password=${{ secrets.SA_PASSWORD }};TrustServerCertificate=True"
 
       - name: Apply Insurance DB Migrations
         working-directory: ./src/Insurance/Insurance.Db
-        run: dotnet run --configuration Release -- --connection "Server=localhost,1433;Database=InsuranceDb;User Id=sa;Password=YourStrong!Passw0rd;TrustServerCertificate=True"
+        run: dotnet run --configuration Release -- --connection "Server=localhost,1433;Database=InsuranceDb;User Id=sa;Password=${{ secrets.SA_PASSWORD }};TrustServerCertificate=True"
 
-      - name: Run Tests
-        run: dotnet test -c Release --no-build --collect:"XPlat Code Coverage" --results-directory ./coverage/
+      - name: Run Unit Tests
+        run: |
+          dotnet test ./src/Insurance/Insurance.UnitTests/Insurance.UnitTests.csproj -c Release --no-build --collect:"XPlat Code Coverage"
+          dotnet test ./src/Vehicle/Vehicle.UnitTests/Vehicle.UnitTests.csproj -c Release --no-build --collect:"XPlat Code Coverage"
+
+      - name: Run Insurance Integration Tests
+        env:
+          ConnectionStrings__Default: "Server=localhost,1433;Database=InsuranceDb;User Id=sa;Password=${{ secrets.SA_PASSWORD }};TrustServerCertificate=True"
+        run: dotnet test ./src/Insurance/Insurance.IntegrationTests/Insurance.IntegrationTests.csproj -c Release --no-build --collect:"XPlat Code Coverage"
+
+      - name: Run Vehicle Integration Tests
+        env:
+          ConnectionStrings__Default: "Server=localhost,1433;Database=VehicleDb;User Id=sa;Password=${{ secrets.SA_PASSWORD }};TrustServerCertificate=True"
+        run: dotnet test ./src/Vehicle/Vehicle.IntegrationTests/Vehicle.IntegrationTests.csproj -c Release --no-build --collect:"XPlat Code Coverage"
+
+      - name: Install ReportGenerator
+        run: dotnet tool install -g dotnet-reportgenerator-globaltool
+
+      - name: Add dotnet tools to PATH
+        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: Merge and generate coverage report
+        run: |
+          reportgenerator \
+            -reports:"**/TestResults/*/coverage.cobertura.xml" \
+            -targetdir:"coverage" \
+            -reporttypes:"Html;Cobertura"
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4

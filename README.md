@@ -67,19 +67,46 @@ The solution uses dedicated `.Contracts` projects (e.g., `Insurance.Service.Cont
 ### Prerequisites
 
 -   .NET 8 SDK
--   Docker and Docker Compose
+-   PowerShell
+-   Docker and Docker Compose (if using the Docker-based setup)
+
+This project provides two ways to run the services locally: via Docker Compose (recommended for ease of use) or by running the .NET services directly on your machine.
+
+### Secret Management
+
+This project uses template files (`.env.template`, `secrets.local.json.template`) as a blueprint for the actual secret files (`.env`, `secrets.local.json`) that you will create locally. These template files are checked into source control to show other developers what secrets are needed, while the actual secret files are listed in `.gitignore` and should never be committed.
+
+Before you run the application, you need to configure the necessary secrets (like the database password). This project uses a unified approach to secret management. You only need to provide your password once in a local file, and a script will configure both the Docker and non-Docker environments for you.
+
+1.  **Create the secrets file**: In the root of the repository, copy the template file `secrets.local.json.template` to a new file named `secrets.local.json`.
+
+2.  **Add your password** (Optional): Open `secrets.local.json` and replace the placeholder `"Passw0rd!123"` with your actual local SQL Server SA password.
+    ```json
+    {
+      "DB_SA_PASSWORD": "YourActualPassword!123"
+    }
+    ```
+
+3.  **Run the configuration script**: Open a terminal in the root of the repository and run the PowerShell script.
+    ```powershell
+    ./configure-secrets.ps1
+    ```
+    This script will perform two actions:
+    -   It will create a `.env` file in the root directory. This file is used by Docker Compose.
+    -   It will use the .NET Secret Manager to configure secrets for local development (when not using Docker).
+
+After completing these steps, you are ready to run the application using either of the options below.
 
 ### Option A: Docker Compose (Recommended)
 
 This is the simplest way to get the entire solution running, as it handles database setup and service configuration automatically.
 
-1.  **Clone the repository.**
-2.  **Navigate to the root directory** of the project in your terminal.
-3.  **Run Docker Compose:**
+1.  **Ensure Docker Desktop is running.**
+2.  **Run Docker Compose:** From the root directory of the project, run:
     ```bash
     docker-compose up --build
     ```
-    This command will:
+    This command will use the `.env` file you generated to:
     -   Build the Docker images for each service.
     -   Start containers for the `Vehicle.Service`, `Insurance.Service`, and a shared SQL Server database.
     -   Automatically run database migrations to set up the required schemas and seed initial data.
@@ -114,17 +141,21 @@ You can use the interactive Swagger UI or `curl` to test the endpoints:
 
 If you prefer to run the services directly on your machine:
 
-1.  **Clone the repository.**
-2.  **Set up the databases:**
-    -   Ensure you have a local SQL Server instance running.
-    -   Update the connection strings in `src/Vehicle.Db/appsettings.json` and `src/Insurance.Db/appsettings.json`.
-    -   Run the DbUp console applications to create and seed the databases:
-        ```bash
-        dotnet run --project src/Vehicle.Db
-        dotnet run --project src/Insurance.Db
-        ```
-3.  **Start the services:**
-    Open two separate terminals and run the following commands. The ports are configured in `launchSettings.json` and should not conflict.
+1.  **Set up a local database**: Ensure you have a local SQL Server instance running that is accessible with the credentials you provided in the `secrets.local.json` file.
+
+2.  **Run Database Migrations**:
+    The `configure-secrets.ps1` script has already set up the secrets for your local .NET environment. However, the database migration tools are simple console apps that don't use the full application host, so we need to pass the connection string directly.
+    ```bash
+    # Apply Vehicle DB Migrations
+    dotnet run --project src/Vehicle/Db -- --connection "Server=localhost,1433;Database=VehicleDb;User Id=sa;Password=YourActualPassword!;TrustServerCertificate=True"
+
+    # Apply Insurance DB Migrations
+    dotnet run --project src/Insurance/Db -- --connection "Server=localhost,1433;Database=InsuranceDb;User Id=sa;Password=YourActualPassword!;TrustServerCertificate=True"
+    ```
+    *(Remember to replace `YourActualPassword!` with your actual password in the commands above)*.
+
+3.  **Start the services**:
+    Open two separate terminals and run the following commands. The services will use the secrets you configured with the script.
     ```bash
     # In terminal 1: Start the Vehicle Service
     dotnet run --project src/Vehicle.Service
@@ -137,9 +168,7 @@ If you prefer to run the services directly on your machine:
 
 #### Verifying the Endpoints (Manual Setup)
 
-When you run the services locally, a Swagger UI page should automatically open in your browser. This interface allows you to explore and test the API endpoints interactively.
-
-Alternatively, you can use `curl` or a tool like Postman. Note that these examples use the ports for the manual setup (`5297` and `5296`):
+When you run the services locally, a Swagger UI page should automatically open in your browser. You can also use `curl` or a tool like Postman. Note that these examples use the ports for the manual setup (`5297` and `5296`):
 
 ```bash
 # Get vehicle details for a specific car
