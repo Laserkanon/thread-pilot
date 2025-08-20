@@ -10,29 +10,22 @@
 #>
 
 $ErrorActionPreference = "Stop"
+
+# --- Configure Development Certificate ---
+Write-Host "Configuring .NET development certificate..."
+try {
+    dotnet dev-certs https --trust
+    Write-Host "Development certificate configured successfully."
+}
+catch {
+    Write-Warning "Failed to configure the development certificate automatically. You may need to run 'dotnet dev-certs https --trust' manually with administrator privileges."
+}
+
 # In environments where $PSScriptRoot is not available, fall back to the current directory.
 if ($PSScriptRoot) {
     $executionRoot = $PSScriptRoot
 } else {
     $executionRoot = Get-Location
-}
-
-# --- Certificate Generation ---
-Write-Host "`nGenerating self-signed certificates for local development..."
-$certDir = Join-Path $executionRoot "nginx/certs"
-$certKey = Join-Path $certDir "localhost.key"
-$certFile = Join-Path $certDir "localhost.crt"
-
-if (-not (Test-Path $certDir)) {
-    New-Item -ItemType Directory -Path $certDir | Out-Null
-}
-
-if (-not (Test-Path $certKey) -or -not (Test-Path $certFile)) {
-    Write-Host "Certificates not found. Generating new self-signed certificates..."
-    openssl req -x509 -nodes -newkey rsa:2048 -keyout $certKey -out $certFile -sha256 -days 365 -subj "/CN=localhost"
-    Write-Host "Certificates generated successfully."
-} else {
-    Write-Host "Certificates already exist. Skipping generation."
 }
 
 $secretsFile = Join-Path $executionRoot "secrets.local.json"
