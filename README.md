@@ -221,6 +221,13 @@ The solution includes basic observability features out of the box.
 -   **Application Metrics**: Both services use **OpenTelemetry** to expose a wide range of application metrics in a **Prometheus**-compatible format. This includes standard metrics for HTTP requests (e.g., duration, count, status codes) and HttpClient calls. The metrics are available on the `/metrics` endpoint of each service and can be scraped by a Prometheus server for monitoring and alerting.
 -   **Structured Logging**: The services are configured to use **Serilog** for structured logging. Logs are written to the console in a machine-readable JSON format, which makes them easy to collect, parse, and analyze in a centralized logging platform.
 
+### Resilience
+
+The `Insurance.Service` implements key resilience patterns using **Polly** for its calls to the `Vehicle.Service`. This makes the system more robust against transient failures and service unavailability. The following policies are in place:
+-   **Retry Policy**: Automatically retries failed HTTP requests with an exponential backoff strategy to handle temporary network issues or service hiccups.
+-   **Circuit Breaker**: Prevents the service from repeatedly calling a known-to-be-unhealthy `Vehicle.Service`. After a configurable number of consecutive failures, the circuit "opens," and subsequent calls fail immediately for a set duration, allowing the downstream service time to recover.
+-   **Fallback Policy**: When the circuit is open, a fallback mechanism provides a default response (an empty list of vehicles) instead of throwing an exception. This ensures that the `Insurance.Service` can still function gracefully and provide a partial response to its clients even when its dependency is down.
+
 ---
 
 ## 4. CI/CD and Developer Onboarding
@@ -266,11 +273,7 @@ This section outlines potential enhancements to the solution, categorized for cl
 
 ### Observability and Resilience
 -   **Distributed Tracing**: Integrate a distributed tracing solution like OpenTelemetry to provide end-to-end visibility of requests as they travel across services, making it easier to diagnose latency and errors.
--   **Resilience Policies**: The `Insurance.Service` now implements key resilience patterns using **Polly** for its calls to the `Vehicle.Service`. This makes the system more robust against transient failures and service unavailability. The following policies are in place:
-    -   **Retry Policy**: Automatically retries failed HTTP requests with an exponential backoff strategy to handle temporary network issues or service hiccups.
-    -   **Circuit Breaker**: Prevents the service from repeatedly calling a known-to-be-unhealthy `Vehicle.Service`. After a configurable number of consecutive failures, the circuit "opens," and subsequent calls fail immediately for a set duration, allowing the downstream service time to recover.
-    -   **Fallback Policy**: When the circuit is open, a fallback mechanism provides a default response (an empty list of vehicles) instead of throwing an exception. This ensures that the `Insurance.Service` can still function gracefully and provide a partial response to its clients even when its dependency is down.
--   **Future Resilience Enhancements**: Further patterns like **Bulkhead** isolation and **Rate Limiting** could be added to provide even greater protection against cascading failures.
+-   **Future Resilience Enhancements**: Further resilience patterns like **Bulkhead** isolation and **Rate Limiting** could be added to provide even greater protection against cascading failures.
 
 ### Architecture and Design
 -   **Event-Driven Architecture**: Explore evolving the architecture to incorporate asynchronous messaging (e.g., with RabbitMQ or Kafka). This would decouple services further and enable patterns like **CQRS** and **Sagas** for more complex workflows.
