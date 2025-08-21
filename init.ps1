@@ -49,11 +49,37 @@ catch {
     exit 1
 }
 
+# ---- JWT Dual-Mode ----
+$jwtAuthority = $secretsConfig.JwtAuthority
+$jwtAudience  = if ($secretsConfig.JwtAudience) { $secretsConfig.JwtAudience } else { "api://insurance-service" }
+$jwtIssuer    = if ($secretsConfig.JwtIssuer)   { $secretsConfig.JwtIssuer }   else { "https://local-dev-issuer" }
+$useIdp = -not [string]::IsNullOrWhiteSpace($jwtAuthority)
+$devKey = "" # Initialize devKey
+
+function New-DevSymmetricKey {
+    [byte[]]$b = New-Object byte[] 32
+    [System.Security.Cryptography.RandomNumberGenerator]::Fill($b)
+    return [Convert]::ToBase64String($b)
+}
+
 # --- Configure Docker Compose .env file ---
 $envFile = Join-Path $executionRoot ".env"
 Write-Host "Generating .env file for Docker Compose..."
 Set-Content -Path $envFile -Value "DB_SA_PASSWORD=$password"
+
+# Append to .env based on mode
+if ($useIdp) {
+    Add-Content -Path $envFile -Value "Jwt__Authority=$jwtAuthority"
+    Add-Content -Path $envFile -Value "Jwt__Audience=$jwtAudience"
+} else {
+    $devKey = New-DevSymmetricKey
+    Add-Content -Path $envFile -Value "Jwt__Authority="
+    Add-Content -Path $envFile -Value "Jwt__Issuer=$jwtIssuer"
+    Add-Content -Path $envFile -Value "Jwt__Audience=$jwtAudience"
+    Add-Content -Path $envFile -Value "Jwt__DevSymmetricKey=$devKey"
+}
 Write-Host ".env file created successfully."
+
 
 # --- Configure .NET User Secrets ---
 Write-Host "`nConfiguring .NET User Secrets for local development..."
@@ -78,11 +104,24 @@ foreach ($entry in $projects.GetEnumerator()) {
     Write-Host "Configuring secrets for project: $projectName"
 
     # Initialize user secrets for the project.
-    dotnet user-secrets init --project $projectPath
+    dotnet user-secrets init --project $projectPath | Out-Null
 
     # Set the connection string secret.
     Write-Host "  - Setting secret: 'ConnectionStrings:Default'"
     dotnet user-secrets set "ConnectionStrings:Default" "$connectionString" --project $projectPath
+
+    # Set JWT secrets
+    if ($useIdp) {
+        dotnet user-secrets set "Jwt:Authority" "$jwtAuthority" --project $projectPath
+        dotnet user-secrets set "Jwt:Audience"  "$jwtAudience"  --project $projectPath
+        dotnet user-secrets remove "Jwt:Issuer"          --project $projectPath | Out-Null
+        dotnet user-secrets remove "Jwt:DevSymmetricKey" --project $projectPath | Out-Null
+    } else {
+        dotnet user-secrets set "Jwt:Authority" ""            --project $projectPath
+        dotnet user-secrets set "Jwt:Issuer"    "$jwtIssuer"  --project $projectPath
+        dotnet user-secrets set "Jwt:Audience"  "$jwtAudience"--project $projectPath
+        dotnet user-secrets set "Jwt:DevSymmetricKey" "$devKey" --project $projectPath
+    }
 }
 
 Write-Host "`nSecrets configured successfully for all environments."

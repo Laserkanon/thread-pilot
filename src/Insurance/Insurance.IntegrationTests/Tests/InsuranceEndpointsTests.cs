@@ -5,6 +5,8 @@ using Insurance.IntegrationTests.TestHelpers;
 using Insurance.Service.Clients;
 using Insurance.Service.Contracts;
 using Microsoft.AspNetCore.Mvc.Testing;
+using System.Net.Http.Headers;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OpenTelemetry.Metrics;
@@ -13,6 +15,10 @@ namespace Insurance.IntegrationTests.Tests;
 
 public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Program>>
 {
+    private const string TestIssuer = "https://test-issuer";
+    private const string TestAudience = "api://test-audience";
+    private const string TestKey = "a-super-secret-key-that-is-long-enough-for-hs256";
+
     private readonly WebApplicationFactory<Program> _factory;
     private readonly Mock<IVehicleServiceClient> _mockVehicleClient;
 
@@ -22,6 +28,17 @@ public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Progr
 
         _factory = factory.WithWebHostBuilder(builder =>
         {
+            builder.ConfigureAppConfiguration((context, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    { "Jwt:Authority", "" }, // Ensure local mode
+                    { "Jwt:Issuer", TestIssuer },
+                    { "Jwt:Audience", TestAudience },
+                    { "Jwt:DevSymmetricKey", TestKey }
+                });
+            });
+
             builder.ConfigureServices(services =>
             {
                 //Add service that can setup test data
@@ -55,7 +72,7 @@ public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Progr
                 new() { RegistrationNumber = regNumber, Make = "Volvo" }
             });
 
-        var client = _factory.CreateClient();
+        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "insurance:read" });
 
         // Act
         var response = await client.GetAsync($"/api/v1/insurances/{personalIdentityNumber}");
@@ -77,13 +94,39 @@ public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Progr
     {
         // Arrange
         const string pin = "INVALID_PIN"; // expected to fail validation
-        var client = _factory.CreateClient();
+        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "insurance:read" });
 
         // Act
         var response = await client.GetAsync($"/api/v1/insurances/{pin}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task GetInsurances_WithoutToken_ReturnsUnauthorized()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/api/v1/insurances/some-pin");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetInsurances_WithTokenMissingScope_ReturnsForbidden()
+    {
+        // Arrange
+        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "some:other:scope" });
+
+        // Act
+        var response = await client.GetAsync("/api/v1/insurances/some-pin");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
     [Fact]

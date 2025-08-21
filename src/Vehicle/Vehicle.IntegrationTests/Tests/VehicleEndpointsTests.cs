@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using System.Net.Http.Headers;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry.Metrics;
 using Vehicle.IntegrationTests.TesHelpers;
@@ -10,12 +12,27 @@ namespace Vehicle.IntegrationTests.Tests;
 
 public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program>>
 {
+    private const string TestIssuer = "https://test-issuer";
+    private const string TestAudience = "api://test-audience";
+    private const string TestKey = "a-super-secret-key-that-is-long-enough-for-hs256";
+
     private readonly WebApplicationFactory<Program> _factory;
 
     public VehicleEndpointsTests(WebApplicationFactory<Program> factory)
     {
         _factory = factory.WithWebHostBuilder(builder =>
         {
+            builder.ConfigureAppConfiguration((context, config) =>
+            {
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    { "Jwt:Authority", "" }, // Ensure local mode
+                    { "Jwt:Issuer", TestIssuer },
+                    { "Jwt:Audience", TestAudience },
+                    { "Jwt:DevSymmetricKey", TestKey }
+                });
+            });
+
             builder.ConfigureServices(services =>
             {
                 services.AddScoped<ITestDataSeeder, TestDataSeeder>();
@@ -32,7 +49,7 @@ public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program
         var seeder = scope.ServiceProvider.GetRequiredService<ITestDataSeeder>();
         await seeder.InsertVehicleAsync(registrationNumber, "TestMake");
 
-        var client = _factory.CreateClient();
+        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "vehicle:read" });
 
         // Act
         var response = await client.GetAsync($"/api/v1/vehicles/{registrationNumber}");
@@ -50,13 +67,52 @@ public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program
     {
         // Arrange: ensure you don't insert this reg number
         const string registrationNumber = "MISSING";
-        var client = _factory.CreateClient();
+        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "vehicle:read" });
 
         // Act
         var response = await client.GetAsync($"/api/v1/vehicles/{registrationNumber}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetVehicle_WithoutToken_ReturnsUnauthorized()
+    {
+        // Arrange
+        var client = _factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/api/v1/vehicles/some-reg");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetVehicle_WithTokenMissingScope_ReturnsForbidden()
+    {
+        // Arrange
+        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "some:other:scope" });
+
+        // Act
+        var response = await client.GetAsync("/api/v1/vehicles/some-reg");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task GetVehiclesBatch_WithValidToken_ReturnsOk()
+    {
+        // Arrange
+        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "vehicle:read" });
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/v1/vehicles/batch", new[] { "reg1", "reg2" });
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

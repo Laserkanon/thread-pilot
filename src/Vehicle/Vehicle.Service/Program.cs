@@ -1,10 +1,13 @@
+using System.Text;
 using FluentValidation;
-using Vehicle.Service.Repositories;
-using Vehicle.Service.Services;
-using Vehicle.Service.Validators;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using Serilog;
+using Vehicle.Service.Repositories;
+using Vehicle.Service.Services;
+using Vehicle.Service.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +19,51 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
     .ReadFrom.Configuration(context.Configuration)
     .ReadFrom.Services(services)
     .Enrich.FromLogContext());
+
+var jwt = builder.Configuration.GetSection("Jwt");
+var authority = jwt["Authority"];
+var audience  = jwt["Audience"];
+var issuer    = jwt["Issuer"];
+var devKey    = jwt["DevSymmetricKey"];
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        if (!string.IsNullOrWhiteSpace(authority))
+        {
+            // IdP mode
+            options.Authority = authority;
+            options.Audience  = audience;
+            options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+        }
+        else
+        {
+            // Local symmetric-key mode
+            if (string.IsNullOrWhiteSpace(devKey))
+                throw new InvalidOperationException("Jwt:DevSymmetricKey must be set when Jwt:Authority is empty.");
+
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = !string.IsNullOrWhiteSpace(issuer),
+                ValidIssuer = issuer,
+                ValidateAudience = !string.IsNullOrWhiteSpace(audience),
+                ValidAudience = audience,
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(devKey)),
+                ValidateLifetime = true,
+                ClockSkew = TimeSpan.FromSeconds(30)
+            };
+        }
+    });
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("insurance:read",  p => p.RequireClaim("scope", "insurance:read"));
+    options.AddPolicy("insurance:write", p => p.RequireClaim("scope", "insurance:write"));
+    options.AddPolicy("vehicle:read",    p => p.RequireClaim("scope", "vehicle:read"));
+    options.AddPolicy("vehicle:write",   p => p.RequireClaim("scope", "vehicle:write"));
+    options.AddPolicy("AdminOnly",       p => p.RequireRole("admin"));
+});
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -61,6 +109,7 @@ if (!disableHttpsRedirection)
 
 app.MapPrometheusScrapingEndpoint();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

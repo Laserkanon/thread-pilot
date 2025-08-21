@@ -1,6 +1,9 @@
+using System.Text;
 using FluentValidation;
 using Insurance.Service.Clients;
 using Insurance.Service.Repositories;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Insurance.Service.Services;
 using Insurance.Service.Validators;
 using OpenTelemetry.Metrics;
@@ -83,6 +86,7 @@ if (!disableHttpsRedirection)
 
 app.MapPrometheusScrapingEndpoint();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
