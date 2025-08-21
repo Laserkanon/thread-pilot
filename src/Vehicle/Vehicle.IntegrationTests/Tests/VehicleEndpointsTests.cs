@@ -10,35 +10,13 @@ using Vehicle.IntegrationTests.TesHelpers;
 
 namespace Vehicle.IntegrationTests.Tests;
 
-public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program>>
+public class VehicleEndpointsTests : IClassFixture<VehicleTestWebApplicationFactory>
 {
-    private const string TestIssuer = "https://test-issuer";
-    private const string TestAudience = "api://test-audience";
-    private const string TestKey = "a-super-secret-key-that-is-long-enough-for-hs256";
+    private readonly VehicleTestWebApplicationFactory _factory;
 
-    private readonly WebApplicationFactory<Program> _factory;
-
-    public VehicleEndpointsTests(WebApplicationFactory<Program> factory)
+    public VehicleEndpointsTests(VehicleTestWebApplicationFactory factory)
     {
-        _factory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureAppConfiguration((context, config) =>
-            {
-                config.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    { "Jwt:Authority", "" }, // Ensure local mode
-                    { "Jwt:Issuer", TestIssuer },
-                    { "Jwt:Audience", TestAudience },
-                    { "Jwt:DevSymmetricKey", TestKey }
-                });
-            });
-
-            builder.ConfigureServices(services =>
-            {
-                services.AddScoped<ITestDataSeeder, TestDataSeeder>();
-                services.AddOpenTelemetry().WithMetrics(builder => builder.AddPrometheusExporter());
-            });
-        });
+        _factory = factory;
     }
 
     [Fact]
@@ -49,7 +27,7 @@ public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program
         var seeder = scope.ServiceProvider.GetRequiredService<ITestDataSeeder>();
         await seeder.InsertVehicleAsync(registrationNumber, "TestMake");
 
-        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "vehicle:read" });
+        var client = _factory.CreateClient().WithBearerToken(VehicleTestWebApplicationFactory.TestKey, VehicleTestWebApplicationFactory.TestIssuer, VehicleTestWebApplicationFactory.TestAudience, new[] { "vehicle:read" });
 
         // Act
         var response = await client.GetAsync($"/api/v1/vehicles/{registrationNumber}");
@@ -67,7 +45,7 @@ public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program
     {
         // Arrange: ensure you don't insert this reg number
         const string registrationNumber = "MISSING";
-        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "vehicle:read" });
+        var client = _factory.CreateClient().WithBearerToken(VehicleTestWebApplicationFactory.TestKey, VehicleTestWebApplicationFactory.TestIssuer, VehicleTestWebApplicationFactory.TestAudience, new[] { "vehicle:read" });
 
         // Act
         var response = await client.GetAsync($"/api/v1/vehicles/{registrationNumber}");
@@ -93,7 +71,7 @@ public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program
     public async Task GetVehicle_WithTokenMissingScope_ReturnsForbidden()
     {
         // Arrange
-        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "some:other:scope" });
+        var client = _factory.CreateClient().WithBearerToken(VehicleTestWebApplicationFactory.TestKey, VehicleTestWebApplicationFactory.TestIssuer, VehicleTestWebApplicationFactory.TestAudience, new[] { "some:other:scope" });
 
         // Act
         var response = await client.GetAsync("/api/v1/vehicles/some-reg");
@@ -106,7 +84,7 @@ public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program
     public async Task GetVehiclesBatch_WithValidToken_ReturnsOk()
     {
         // Arrange
-        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "vehicle:read" });
+        var client = _factory.CreateClient().WithBearerToken(VehicleTestWebApplicationFactory.TestKey, VehicleTestWebApplicationFactory.TestIssuer, VehicleTestWebApplicationFactory.TestAudience, new[] { "vehicle:read" });
 
         // Act
         var response = await client.PostAsJsonAsync("/api/v1/vehicles/batch", new[] { "reg1", "reg2" });

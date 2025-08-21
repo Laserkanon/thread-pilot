@@ -13,43 +13,13 @@ using OpenTelemetry.Metrics;
 
 namespace Insurance.IntegrationTests.Tests;
 
-public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Program>>
+public class InsuranceEndpointsTests : IClassFixture<InsuranceTestWebApplicationFactory>
 {
-    private const string TestIssuer = "https://test-issuer";
-    private const string TestAudience = "api://test-audience";
-    private const string TestKey = "a-super-secret-key-that-is-long-enough-for-hs256";
+    private readonly InsuranceTestWebApplicationFactory _factory;
 
-    private readonly WebApplicationFactory<Program> _factory;
-    private readonly Mock<IVehicleServiceClient> _mockVehicleClient;
-
-    public InsuranceEndpointsTests(WebApplicationFactory<Program> factory)
+    public InsuranceEndpointsTests(InsuranceTestWebApplicationFactory factory)
     {
-        _mockVehicleClient = new Mock<IVehicleServiceClient>();
-
-        _factory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureAppConfiguration((context, config) =>
-            {
-                config.AddInMemoryCollection(new Dictionary<string, string?>
-                {
-                    { "Jwt:Authority", "" }, // Ensure local mode
-                    { "Jwt:Issuer", TestIssuer },
-                    { "Jwt:Audience", TestAudience },
-                    { "Jwt:DevSymmetricKey", TestKey }
-                });
-            });
-
-            builder.ConfigureServices(services =>
-            {
-                //Add service that can setup test data
-                services.AddScoped<ITestDataSeeder, TestDataSeeder>();
-                
-                //Mock external service
-                services.AddScoped<IVehicleServiceClient>(_ => _mockVehicleClient.Object);
-
-                services.AddOpenTelemetry().WithMetrics(builder => builder.AddPrometheusExporter());
-            });
-        });
+        _factory = factory;
     }
 
     [Fact]
@@ -65,14 +35,14 @@ public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Progr
         await testDataSeeder.InsertInsuranceAsync(personalIdentityNumber, ProductType.Car, 30, regNumber);
         await testDataSeeder.InsertInsuranceAsync(personalIdentityNumber, ProductType.Pet, 10);
 
-        _mockVehicleClient
+        _factory.MockVehicleClient
             .Setup(c => c.GetVehiclesAsync(It.Is<string[]>(arr => arr.Contains(regNumber))))
             .ReturnsAsync(new List<Insurance.Service.Models.VehicleDetails>
             {
                 new() { RegistrationNumber = regNumber, Make = "Volvo" }
             });
 
-        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "insurance:read" });
+        var client = _factory.CreateClient().WithBearerToken(InsuranceTestWebApplicationFactory.TestKey, InsuranceTestWebApplicationFactory.TestIssuer, InsuranceTestWebApplicationFactory.TestAudience, new[] { "insurance:read" });
 
         // Act
         var response = await client.GetAsync($"/api/v1/insurances/{personalIdentityNumber}");
@@ -94,7 +64,7 @@ public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Progr
     {
         // Arrange
         const string pin = "INVALID_PIN"; // expected to fail validation
-        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "insurance:read" });
+        var client = _factory.CreateClient().WithBearerToken(InsuranceTestWebApplicationFactory.TestKey, InsuranceTestWebApplicationFactory.TestIssuer, InsuranceTestWebApplicationFactory.TestAudience, new[] { "insurance:read" });
 
         // Act
         var response = await client.GetAsync($"/api/v1/insurances/{pin}");
@@ -120,7 +90,7 @@ public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Progr
     public async Task GetInsurances_WithTokenMissingScope_ReturnsForbidden()
     {
         // Arrange
-        var client = _factory.CreateClient().WithBearerToken(TestKey, TestIssuer, TestAudience, new[] { "some:other:scope" });
+        var client = _factory.CreateClient().WithBearerToken(InsuranceTestWebApplicationFactory.TestKey, InsuranceTestWebApplicationFactory.TestIssuer, InsuranceTestWebApplicationFactory.TestAudience, new[] { "some:other:scope" });
 
         // Act
         var response = await client.GetAsync("/api/v1/insurances/some-pin");

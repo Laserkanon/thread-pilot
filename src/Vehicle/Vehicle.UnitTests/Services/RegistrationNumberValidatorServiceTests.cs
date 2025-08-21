@@ -100,9 +100,9 @@ namespace Vehicle.UnitTests.Services
                 x => x.Log(
                     LogLevel.Warning,
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("The number of registration numbers exceeds the limit of 500.")),
+                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("The number of registration numbers exceeds the limit of 500.")),
                     null,
-                    It.IsAny<Func<It.IsAnyType, Exception, string>>()!),
+                    It.IsAny<Func<It.IsAnyType, Exception, string>>()),
                 Times.Once);
         }
     }
