@@ -14,14 +14,6 @@ RUN dotnet restore ThreadPilot.sln
 WORKDIR /src/src/Insurance/Insurance.Service
 RUN dotnet publish -c Release -o /app/publish
 
-# -------- production image --------
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS prod
-WORKDIR /app
-COPY --from=build /app/publish .
-# Bind to all interfaces in container
-ENV ASPNETCORE_URLS=http://0.0.0.0:8080
-ENTRYPOINT ["dotnet", "Insurance.Service.dll"]
-
 # -------- dev image (for docker-compose local) --------
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS dev
 WORKDIR /app
@@ -31,4 +23,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl \
 COPY --from=build /app/publish .
 ENV ASPNETCORE_ENVIRONMENT=Development \
     ASPNETCORE_URLS=http://0.0.0.0:8080
+ENTRYPOINT ["dotnet", "Insurance.Service.dll"]
+
+# -------- production image --------
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS prod
+WORKDIR /app
+COPY --from=build /app/publish .
+# Bind to all interfaces in container
+ENV ASPNETCORE_URLS=http://0.0.0.0:8080
 ENTRYPOINT ["dotnet", "Insurance.Service.dll"]

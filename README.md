@@ -227,7 +227,7 @@ The solution includes basic observability features out of the box.
 
 ### CI/CD Pipeline
 
-A basic Continuous Integration (CI) pipeline is defined in `.github/workflows/ci.yml`. This GitHub Actions workflow triggers on every push and pull request to automatically build the solution, run the tests, and ensure the codebase remains in a healthy state.
+A basic Continuous Integration (CI) pipeline is defined in `.github/workflows/ci.yml`. This GitHub Actions workflow triggers on every push and pull request to automatically build the solution, run the tests, and ensure the codebase remains in a healthy state. On pushes to any branch, it also publishes NuGet packages for the service contracts and Docker images for the services to the GitHub Package Registry, using a dynamic versioning strategy for feature branches.
 
 ### Onboarding New Developers
 
@@ -287,7 +287,6 @@ This section outlines potential enhancements to the solution, categorized for cl
 -   **Automated E2E Regression Testing**: Establish a dedicated suite of end-to-end (E2E) regression tests that run against a fully deployed, production-like environment. This would provide the highest level of confidence that the entire system functions correctly as a whole.
 
 ### CI/CD and Deployment
--   **Publish contracts and docker images**
 -   **Advanced Deployment Strategies**: Enhance the CI/CD pipeline to support advanced deployment strategies like **Blue-Green deployments** or **Canary Releases**. This would minimize downtime and risk during production releases.
 
 ### Repository structure
