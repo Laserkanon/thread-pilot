@@ -266,7 +266,11 @@ This section outlines potential enhancements to the solution, categorized for cl
 
 ### Observability and Resilience
 -   **Distributed Tracing**: Integrate a distributed tracing solution like OpenTelemetry to provide end-to-end visibility of requests as they travel across services, making it easier to diagnose latency and errors.
--   **Expanded Resilience Policies**: Enhance the existing resilience strategy by adding more advanced patterns from libraries like **Polly**. This includes implementing **Retry** policies for transient failures, **Circuit Breakers** to prevent cascading failures, and patterns like **Bulkhead** isolation and **Rate Limiting** to protect services from being overwhelmed.
+-   **Resilience Policies**: The `Insurance.Service` now implements key resilience patterns using **Polly** for its calls to the `Vehicle.Service`. This makes the system more robust against transient failures and service unavailability. The following policies are in place:
+    -   **Retry Policy**: Automatically retries failed HTTP requests with an exponential backoff strategy to handle temporary network issues or service hiccups.
+    -   **Circuit Breaker**: Prevents the service from repeatedly calling a known-to-be-unhealthy `Vehicle.Service`. After a configurable number of consecutive failures, the circuit "opens," and subsequent calls fail immediately for a set duration, allowing the downstream service time to recover.
+    -   **Fallback Policy**: When the circuit is open, a fallback mechanism provides a default response (an empty list of vehicles) instead of throwing an exception. This ensures that the `Insurance.Service` can still function gracefully and provide a partial response to its clients even when its dependency is down.
+-   **Future Resilience Enhancements**: Further patterns like **Bulkhead** isolation and **Rate Limiting** could be added to provide even greater protection against cascading failures.
 
 ### Architecture and Design
 -   **Event-Driven Architecture**: Explore evolving the architecture to incorporate asynchronous messaging (e.g., with RabbitMQ or Kafka). This would decouple services further and enable patterns like **CQRS** and **Sagas** for more complex workflows.
