@@ -3,7 +3,7 @@
 ```mermaid
 graph TD
     subgraph "User"
-        actor User
+        U(User)
     end
 
     subgraph "Insurance.Service"
@@ -44,6 +44,6 @@ graph TD
         VehicleAPI[Vehicle Service API]
     end
 
-    User --> IController
+    U --> IController
     Client --> VehicleAPI
 ```
