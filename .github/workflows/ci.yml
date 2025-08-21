@@ -67,15 +67,33 @@ jobs:
           name: code-coverage-report
           path: ./coverage/
 
+  calculate-version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag_suffix: ${{ steps.version.outputs.tag_suffix }}
+    steps:
+      - name: Generate version suffix for feature branches
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "tag_suffix=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          BRANCH_NAME="${GITHUB_REF_NAME:-$(echo "$GITHUB_REF" | sed 's#.*/##')}"
+          SANITIZED_BRANCH=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^0-9a-z-]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//' | cut -c1-30)
+          echo "tag_suffix=feat-${SANITIZED_BRANCH}.${GITHUB_RUN_NUMBER}" >> $GITHUB_OUTPUT
+
   publish-packages:
     runs-on: ubuntu-latest
-    needs: build-test
+    needs: [build-test, calculate-version]
     if: github.event_name == 'push'
     permissions:
       contents: read
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
@@ -99,20 +117,7 @@ jobs:
       - name: Pack and Push Feature Branch Version
         if: github.ref != 'refs/heads/main' && steps.changes.outputs.contracts == 'true'
         run: |
-          # 1) Get branch ref name reliably (e.g., "feat/ci-nuget-publishing")
-          BRANCH_NAME="${GITHUB_REF_NAME:-$(echo "$GITHUB_REF" | sed 's#.*/##')}"
-
-          # 2) Sanitize for NuGet prerelease: keep a-z, 0-9 and hyphens only
-          #    - lower-case, replace anything else with '-'
-          #    - collapse repeated '-' and trim leading/trailing '-'
-          SANITIZED_BRANCH=$(echo "$BRANCH_NAME" \
-            | tr '[:upper:]' '[:lower:]' \
-            | sed 's/[^0-9a-z-]/-/g; s/-\{2,\}/-/g; s/^-//; s/-$//')
-
-          # Optional: keep it reasonably short to avoid 64-char version limit issues
-          SANITIZED_BRANCH=${SANITIZED_BRANCH:0:30}
-
-          PKG_SUFFIX="feat-${SANITIZED_BRANCH}.${GITHUB_RUN_NUMBER}"
+          PKG_SUFFIX="${{ needs.calculate-version.outputs.tag_suffix }}"
 
           # Vehicle.Service.Contracts
           VEHICLE_BASE_VERSION=$(sed -n 's/.*<Version>\(.*\)<\/Version>.*/\1/p' \
@@ -134,3 +139,75 @@ jobs:
           dotnet nuget push "./packages/*.nupkg" \
             --api-key ${{ secrets.GITHUB_TOKEN }} \
             --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+
+  publish-images:
+    runs-on: ubuntu-latest
+    needs: [build-test, calculate-version]
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for changes in services
+        id: changes
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            vehicle_service:
+              - 'src/Vehicle/Vehicle.Service/**'
+              - 'src/Vehicle/Vehicle.Service.Contracts/**'
+            insurance_service:
+              - 'src/Insurance/Insurance.Service/**'
+              - 'src/Insurance/Insurance.Service.Contracts/**'
+              - 'src/Vehicle/Vehicle.Service.Contracts/**'
+
+      - name: Log in to GitHub Container Registry
+        if: steps.changes.outputs.vehicle_service == 'true' || steps.changes.outputs.insurance_service == 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image tags
+        id: tags
+        run: |
+          IMAGE_PREFIX="ghcr.io/$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')/${{ github.event.repository.name }}"
+
+          # Main branch tags
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            VEHICLE_TAGS="${IMAGE_PREFIX}/vehicle-service:latest,${IMAGE_PREFIX}/vehicle-service:${{ github.sha }}"
+            INSURANCE_TAGS="${IMAGE_PREFIX}/insurance-service:latest,${IMAGE_PREFIX}/insurance-service:${{ github.sha }}"
+            echo "vehicle_tags=${VEHICLE_TAGS}" >> $GITHUB_OUTPUT
+            echo "insurance_tags=${INSURANCE_TAGS}" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Feature branch tags
+          TAG_SUFFIX="${{ needs.calculate-version.outputs.tag_suffix }}"
+          VEHICLE_TAGS="${IMAGE_PREFIX}/vehicle-service:${TAG_SUFFIX}"
+          INSURANCE_TAGS="${IMAGE_PREFIX}/insurance-service:${TAG_SUFFIX}"
+          echo "vehicle_tags=${VEHICLE_TAGS}" >> $GITHUB_OUTPUT
+          echo "insurance_tags=${INSURANCE_TAGS}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Vehicle.Service image
+        if: steps.changes.outputs.vehicle_service == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./src/Vehicle/Vehicle.Service/Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.vehicle_tags }}
+
+      - name: Build and push Insurance.Service image
+        if: steps.changes.outputs.insurance_service == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./src/Insurance/Insurance.Service/Dockerfile
+          push: true
+          tags: ${{ steps.tags.outputs.insurance_tags }}
