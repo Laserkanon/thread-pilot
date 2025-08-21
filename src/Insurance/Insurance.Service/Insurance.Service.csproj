@@ -7,7 +7,7 @@
     <WarningsAsErrors />
     <UserSecretsId>23ff5b46-9ca8-496f-9aed-26830c10661f</UserSecretsId>
     <UserSecretsId>23ff5b46-9ca8-496f-9aed-26830c10661f</UserSecretsId>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <LangVersion>preview</LangVersion>
   </PropertyGroup>
 
