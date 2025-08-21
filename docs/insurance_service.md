@@ -21,6 +21,23 @@ graph TD;
         VehicleModel[Vehicle];
         Db[(InsuranceDb)];
         AppSettings[appsettings.json];
+
+        IController --> IService;
+        IController --> PinValidator;
+        IService <|--. Service;
+        Service --> IRepo;
+        Service --> IClient;
+        Service --> IFToggle;
+        IRepo <|--. Repo;
+        IClient <|--. Client;
+        IFToggle <|--. FToggle;
+        Repo --> Db;
+        FToggle --> AppSettings;
+        IController ..> InsuranceModel;
+        Service ..> InsuranceModel;
+        Repo ..> InsuranceModel;
+        Service ..> VehicleModel;
+        Client ..> VehicleModel;
     end;
 
     subgraph "Vehicle.Service";
@@ -28,24 +45,5 @@ graph TD;
     end;
 
     User --> IController;
-
-    IController --> IService;
-    IController --> PinValidator;
-    IService <|--. Service;
-    Service --> IRepo;
-    Service --> IClient;
-    Service --> IFToggle;
-    IRepo <|--. Repo;
-    IClient <|--. Client;
-    IFToggle <|--. FToggle;
-    Repo --> Db;
-    FToggle --> AppSettings;
-
     Client --> VehicleAPI;
-
-    IController ..> InsuranceModel;
-    Service ..> InsuranceModel;
-    Repo ..> InsuranceModel;
-    Service ..> VehicleModel;
-    Client ..> VehicleModel;
 ```

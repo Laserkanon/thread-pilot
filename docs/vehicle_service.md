@@ -10,13 +10,13 @@ graph TD;
         ValidatorService[RegistrationNumberValidatorService];
         Model[Vehicle];
         Db[(VehicleDb)];
-    end;
 
-    Controller --> IRepo;
-    Controller --> IValidatorService;
-    IRepo <|--. Repo;
-    IValidatorService <|--. ValidatorService;
-    Repo --> Db;
-    Controller ..> Model;
-    Repo ..> Model;
+        Controller --> IRepo;
+        Controller --> IValidatorService;
+        IRepo <|--. Repo;
+        IValidatorService <|--. ValidatorService;
+        Repo --> Db;
+        Controller ..> Model;
+        Repo ..> Model;
+    end;
 ```
