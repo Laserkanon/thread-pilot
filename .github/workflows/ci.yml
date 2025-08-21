@@ -148,7 +148,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check for changes in services
+        id: changes
+        uses: dorny/paths-filter@v2
+        with:
+          filters: |
+            vehicle_service:
+              - 'src/Vehicle/Vehicle.Service/**'
+              - 'src/Vehicle/Vehicle.Service.Contracts/**'
+            insurance_service:
+              - 'src/Insurance/Insurance.Service/**'
+              - 'src/Insurance/Insurance.Service.Contracts/**'
+              - 'src/Vehicle/Vehicle.Service.Contracts/**'
+
       - name: Log in to GitHub Container Registry
+        if: steps.changes.outputs.vehicle_service == 'true' || steps.changes.outputs.insurance_service == 'true'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -177,6 +191,7 @@ jobs:
           echo "insurance_tags=${INSURANCE_TAGS}" >> $GITHUB_OUTPUT
 
       - name: Build and push Vehicle.Service image
+        if: steps.changes.outputs.vehicle_service == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -185,6 +200,7 @@ jobs:
           tags: ${{ steps.tags.outputs.vehicle_tags }}
 
       - name: Build and push Insurance.Service image
+        if: steps.changes.outputs.insurance_service == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
