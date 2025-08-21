@@ -172,7 +172,7 @@ jobs:
       - name: Generate image tags
         id: tags
         run: |
-          IMAGE_PREFIX="ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}"
+          IMAGE_PREFIX="ghcr.io/$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')/${{ github.event.repository.name }}"
 
           # Main branch tags
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
