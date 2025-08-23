@@ -25,7 +25,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# --- Recursive function to handle nested secrets ---
+# --- Recursive function to handle nested secrets for .NET User Secrets ---
 function Set-SecretsRecursively {
     param(
         $ProjectObject,
@@ -37,11 +37,9 @@ function Set-SecretsRecursively {
         $key = if ($KeyPrefix) { "$KeyPrefix`:$($prop.Name)" } else { $prop.Name }
         $value = $prop.Value
 
-        # If the value is another object, recurse into it.
         if ($value -is [System.Management.Automation.PSCustomObject]) {
             Set-SecretsRecursively -ProjectObject $value -ProjectPath $ProjectPath -KeyPrefix $key
         }
-        # Otherwise, set the secret.
         else {
             Write-Host "   - Setting $key"
             dotnet user-secrets set $key "$value" --project $ProjectPath | Out-Null
@@ -78,19 +76,42 @@ if (-not (Test-Path $secretsFile)) {
 Write-Host "🔑 Reading secrets from $secretsFile ..."
 $secretsConfig = Get-Content $secretsFile -Raw | ConvertFrom-Json
 
-# --- Create .env file (merged from all secrets) ---
-# This part does not need recursion for .env format
+# --- Create .env file (merged and flattened from all secrets) ---
 $envFile = Join-Path $executionRoot ".env"
-Write-Host "📝 Generating merged .env file for Docker Compose..."
+Write-Host "📝 Generating merged and flattened .env file for Docker Compose..."
 
-$lines = @()
-foreach ($proj in $secretsConfig.PSObject.Properties) {
-    foreach ($prop in $proj.Value.PSObject.Properties) {
-        $envKey = $prop.Name -replace ":", "__"
-        $lines += "$envKey=$($prop.Value)"
+$envVars = @{} # Use a hashtable to store unique, flattened keys.
+
+# Recursive helper function to flatten the JSON properties
+function Add-ToEnvHashtable {
+    param(
+        $ConfigObject,
+        [string]$Prefix = ""
+    )
+    foreach ($prop in $ConfigObject.PSObject.Properties) {
+        # Docker Compose .env files don't handle dots or colons well in keys.
+        # Replace them with double underscores, which is also the .NET convention.
+        $key = if ([string]::IsNullOrEmpty($Prefix)) { $prop.Name } else { "$Prefix`__$($prop.Name)" }
+        $key = $key -replace "[:.]", "__"
+        $value = $prop.Value
+
+        if ($value -is [System.Management.Automation.PSCustomObject]) {
+            Add-ToEnvHashtable -ConfigObject $value -Prefix $key
+        }
+        else {
+            $envVars[$key] = $value
+        }
     }
 }
-Set-Content -Path $envFile -Value $lines -Encoding UTF8
+
+# Process all top-level sections from secrets.local.json
+foreach ($proj in $secretsConfig.PSObject.Properties) {
+    Add-ToEnvHashtable -ConfigObject $proj.Value
+}
+
+# Convert the hashtable to an array of "KEY=VALUE" strings and save to file
+$lines = $envVars.GetEnumerator() | ForEach-Object { "$($_.Name)=$($_.Value)" }
+Set-Content -Path $envFile -Value ($lines | Sort-Object) -Encoding UTF8
 Write-Host "✅ .env file created at $envFile"
 
 
@@ -115,7 +136,7 @@ foreach ($proj in $secretsConfig.PSObject.Properties) {
     # Init secrets if missing
     dotnet user-secrets init --project $projectPath | Out-Null
 
-    # Call the new recursive function instead of the old loop
+    # Call the recursive function for .NET secrets
     Set-SecretsRecursively -ProjectObject $proj.Value -ProjectPath $projectPath
 }
 

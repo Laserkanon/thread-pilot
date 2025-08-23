@@ -25,7 +25,7 @@ builder.Services.AddScoped<IValidator<string>, PersonalIdentifyNumberValidator>(
 builder.Services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>()
     .ConfigureHttpClientWithApiKey(VehicleHost.Name)
     .AddPolicyHandler((sp, _) => HttpClientPolicies.GetFallbackPolicy(sp.GetRequiredService<ILogger>()))
-    .AddPolicyHandler(HttpClientPolicies.GetRetryPolicy())
+    .AddPolicyHandler((sp, _) => HttpClientPolicies.GetRetryPolicy(sp.GetRequiredService<ILogger>()))
     .AddPolicyHandler((sp, _) => HttpClientPolicies.GetCircuitBreakerPolicy(sp.GetRequiredService<ILogger>()));
 
 var app = builder.Build();

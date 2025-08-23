@@ -95,6 +95,7 @@ public class VehicleServiceClientTests
     public async Task GetVehiclesAsync_WhenApiReturns500AndThenSuccess_ShouldRetryAndReturnMappedVehicles()
     {
         // Arrange
+        var mockLogger = new Mock<ILogger>();
         var registrationNumbers = new[] { "ABC-123" };
         var vehicleContracts = new[]
         {
@@ -117,7 +118,7 @@ public class VehicleServiceClientTests
             .ReturnsAsync(errorResponseMessage)
             .ReturnsAsync(successResponseMessage);
 
-        var retryPolicy = HttpClientPolicies.GetRetryPolicy();
+        var retryPolicy = HttpClientPolicies.GetRetryPolicy(mockLogger.Object);
         var httpClient = new HttpClient(new PollyHandler(retryPolicy)
         {
             InnerHandler = _mockHttpMessageHandler.Object

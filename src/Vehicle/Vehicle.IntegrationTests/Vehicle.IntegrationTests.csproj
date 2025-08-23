@@ -31,6 +31,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Infrastructure\Infrastructure.csproj" />
     <ProjectReference Include="..\Vehicle.Service\Vehicle.Service.csproj" />
     <ProjectReference Include="..\Vehicle.Service.Contracts\Vehicle.Service.Contracts.csproj" />
   </ItemGroup>
