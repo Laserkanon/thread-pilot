@@ -1,4 +1,5 @@
 using Dapper;
+using Infrastructure.Hosting;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 
@@ -10,8 +11,8 @@ public sealed class TestDataSeeder : ITestDataSeeder
 
     public TestDataSeeder(IConfiguration cfg)
     {
-        _cs = cfg.GetConnectionString("Default")
-              ?? throw new InvalidOperationException("ConnectionStrings:Default not configured");
+        _cs = cfg.RequireSqlConnectionString() ??
+              throw new InvalidOperationException("ConnectionStrings not configured");
     }
 
     public async Task InsertVehicleAsync(string registrationNumber, string make)

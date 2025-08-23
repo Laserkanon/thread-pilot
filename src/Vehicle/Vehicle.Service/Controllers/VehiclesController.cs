@@ -24,8 +24,8 @@ public class VehiclesController : ControllerBase
         _registrationNumberValidatorService = registrationNumberValidatorService;
     }
 
+    [Authorize]
     [HttpGet("{registrationNumber}")]
-    [Authorize(Policy = "vehicle:read")]
     public async Task<IActionResult> GetVehicle(string registrationNumber)
     {
         var validation = await _regValidator.ValidateAsync(registrationNumber);
@@ -48,8 +48,8 @@ public class VehiclesController : ControllerBase
         return Ok(vehicleContract);
     }
 
+    [Authorize]
     [HttpPost("batch")]
-    [Authorize(Policy = "vehicle:read")]
     public async Task<IActionResult> GetVehiclesBatch([FromBody] string[] registrationNumbers)
     {
         var validRegistrationNumbers = _registrationNumberValidatorService.Validate(registrationNumbers);

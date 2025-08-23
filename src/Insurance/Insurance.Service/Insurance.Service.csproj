@@ -4,8 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <WarningsAsErrors />
-    <UserSecretsId>23ff5b46-9ca8-496f-9aed-26830c10661f</UserSecretsId>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <UserSecretsId>23ff5b46-9ca8-496f-9aed-26830c10661f</UserSecretsId>
     <Version>1.2.0</Version>
     <LangVersion>preview</LangVersion>
@@ -33,6 +32,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Infrastructure\Infrastructure.csproj" />
     <ProjectReference Include="..\..\Vehicle\Vehicle.Service.Contracts\Vehicle.Service.Contracts.csproj" />
     <ProjectReference Include="..\Insurance.Service.Contracts\Insurance.Service.Contracts.csproj" />
   </ItemGroup>

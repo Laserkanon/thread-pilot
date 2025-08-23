@@ -125,6 +125,8 @@ Before you run the application, you need to configure the necessary secrets (lik
     This script will perform two actions:
     -   It will create a `.env` file in the root directory. This file is used by Docker Compose.
     -   It will use the .NET Secret Manager to configure secrets for local development (when not using Docker).
+    - 
+TODO: give hint about pwsh -NoProfile -ExecutionPolicy Bypass -File .\new-dev-jwt.ps1
 
 After completing these steps, you are ready to run the application using either of the options below.
 

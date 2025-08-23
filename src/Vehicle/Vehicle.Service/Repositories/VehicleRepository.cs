@@ -1,6 +1,7 @@
 using System.Data;
 using Microsoft.Data.SqlClient;
 using Dapper;
+using Infrastructure.Hosting;
 
 namespace Vehicle.Service.Repositories;
 
@@ -10,7 +11,7 @@ public class VehicleRepository : IVehicleRepository
 
     public VehicleRepository(IConfiguration configuration)
     {
-        _connectionString = configuration.GetConnectionString("Default")!;
+        _connectionString = configuration.RequireSqlConnectionString();
     }
 
     public async Task<Models.Vehicle?> GetVehicleByRegistrationNumberAsync(string registrationNumber)

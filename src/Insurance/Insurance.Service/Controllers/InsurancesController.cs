@@ -20,7 +20,7 @@ public class InsurancesController : ControllerBase
     }
 
     [HttpGet("{personalIdentityNumber}")]
-    [Authorize(Policy = "insurance:read")]
+    [Authorize]
     public async Task<IActionResult> GetInsurances(string personalIdentityNumber)
     {
         var validationResult = await _pinValidator.ValidateAsync(personalIdentityNumber);

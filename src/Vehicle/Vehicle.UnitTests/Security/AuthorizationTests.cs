@@ -19,7 +19,6 @@ public class AuthorizationTests
 
         // Assert
         Assert.NotNull(attribute);
-        Assert.Equal("vehicle:read", attribute.Policy);
     }
 
     [Fact]
@@ -34,6 +33,5 @@ public class AuthorizationTests
 
         // Assert
         Assert.NotNull(attribute);
-        Assert.Equal("vehicle:read", attribute.Policy);
     }
 }

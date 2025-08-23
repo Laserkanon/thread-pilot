@@ -19,6 +19,5 @@ public class AuthorizationTests
 
         // Assert
         Assert.NotNull(attribute);
-        Assert.Equal("insurance:read", attribute.Policy);
     }
 }

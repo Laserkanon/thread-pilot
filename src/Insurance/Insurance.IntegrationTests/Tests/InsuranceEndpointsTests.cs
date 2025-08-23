@@ -1,15 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Insurance.IntegrationTests.Infrastructure;
 using Insurance.IntegrationTests.TestHelpers;
-using Insurance.Service.Clients;
 using Insurance.Service.Contracts;
-using Microsoft.AspNetCore.Mvc.Testing;
-using System.Net.Http.Headers;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using OpenTelemetry.Metrics;
 
 namespace Insurance.IntegrationTests.Tests;
 
@@ -42,7 +38,7 @@ public class InsuranceEndpointsTests : IClassFixture<InsuranceTestWebApplication
                 new() { RegistrationNumber = regNumber, Make = "Volvo" }
             });
 
-        var client = _factory.CreateClient().WithBearerToken(InsuranceTestWebApplicationFactory.TestKey, InsuranceTestWebApplicationFactory.TestIssuer, InsuranceTestWebApplicationFactory.TestAudience, new[] { "insurance:read" });
+        var client = _factory.CreateAuthenticatedClient();
 
         // Act
         var response = await client.GetAsync($"/api/v1/insurances/{personalIdentityNumber}");
@@ -64,7 +60,7 @@ public class InsuranceEndpointsTests : IClassFixture<InsuranceTestWebApplication
     {
         // Arrange
         const string pin = "INVALID_PIN"; // expected to fail validation
-        var client = _factory.CreateClient().WithBearerToken(InsuranceTestWebApplicationFactory.TestKey, InsuranceTestWebApplicationFactory.TestIssuer, InsuranceTestWebApplicationFactory.TestAudience, new[] { "insurance:read" });
+        var client = _factory.CreateAuthenticatedClient();
 
         // Act
         var response = await client.GetAsync($"/api/v1/insurances/{pin}");
@@ -74,7 +70,7 @@ public class InsuranceEndpointsTests : IClassFixture<InsuranceTestWebApplication
     }
 
     [Fact]
-    public async Task GetInsurances_WithoutToken_ReturnsUnauthorized()
+    public async Task GetInsurances_WithoutApiKey_ReturnsUnauthorized()
     {
         // Arrange
         var client = _factory.CreateClient();
@@ -87,23 +83,10 @@ public class InsuranceEndpointsTests : IClassFixture<InsuranceTestWebApplication
     }
 
     [Fact]
-    public async Task GetInsurances_WithTokenMissingScope_ReturnsForbidden()
-    {
-        // Arrange
-        var client = _factory.CreateClient().WithBearerToken(InsuranceTestWebApplicationFactory.TestKey, InsuranceTestWebApplicationFactory.TestIssuer, InsuranceTestWebApplicationFactory.TestAudience, new[] { "some:other:scope" });
-
-        // Act
-        var response = await client.GetAsync("/api/v1/insurances/some-pin");
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-    }
-
-    [Fact]
     public async Task GetMetrics_ReturnsOkAndPrometheusContent()
     {
         // Arrange
-        var client = _factory.CreateClient();
+        var client = _factory.CreateAuthenticatedClient();
 
         // Act
         var response = await client.GetAsync("/metrics");

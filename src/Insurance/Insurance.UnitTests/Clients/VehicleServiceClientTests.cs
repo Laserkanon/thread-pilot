@@ -14,21 +14,21 @@ namespace Insurance.UnitTests.Clients;
 
 public class VehicleServiceClientTests
 {
-    private readonly Mock<IConfiguration> _mockConfiguration;
     private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler;
     private readonly VehicleServiceClient _client;
 
     public VehicleServiceClientTests()
     {
-        _mockConfiguration = new Mock<IConfiguration>();
         _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
 
         var mockConfSection = new Mock<IConfigurationSection>();
         mockConfSection.Setup(s => s.Value).Returns("http://localhost:5000");
-        _mockConfiguration.Setup(c => c.GetSection("VehicleService:BaseUrl")).Returns(mockConfSection.Object);
 
-        var httpClient = new HttpClient(_mockHttpMessageHandler.Object);
-        _client = new VehicleServiceClient(httpClient, _mockConfiguration.Object, NullLogger<VehicleServiceClient>.Instance);
+        var httpClient = new HttpClient(_mockHttpMessageHandler.Object)
+        {
+            BaseAddress = new Uri("http://localhost:5000")
+        };
+        _client = new VehicleServiceClient(httpClient, NullLogger<VehicleServiceClient>.Instance);
     }
 
     [Fact]
@@ -66,7 +66,8 @@ public class VehicleServiceClientTests
         };
         var responseMessage = new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent(JsonSerializer.Serialize(vehicleContracts), System.Text.Encoding.UTF8, "application/json")
+            Content = new StringContent(JsonSerializer.Serialize(vehicleContracts), System.Text.Encoding.UTF8,
+                "application/json")
         };
 
         _mockHttpMessageHandler
@@ -101,7 +102,8 @@ public class VehicleServiceClientTests
         };
         var successResponseMessage = new HttpResponseMessage(HttpStatusCode.OK)
         {
-            Content = new StringContent(JsonSerializer.Serialize(vehicleContracts), System.Text.Encoding.UTF8, "application/json")
+            Content = new StringContent(JsonSerializer.Serialize(vehicleContracts), System.Text.Encoding.UTF8,
+                "application/json")
         };
         var errorResponseMessage = new HttpResponseMessage(HttpStatusCode.InternalServerError);
 
@@ -119,9 +121,12 @@ public class VehicleServiceClientTests
         var httpClient = new HttpClient(new PollyHandler(retryPolicy)
         {
             InnerHandler = _mockHttpMessageHandler.Object
-        });
+        })
+        {
+            BaseAddress = new Uri("http://localhost:5000")
+        };
 
-        var client = new VehicleServiceClient(httpClient, _mockConfiguration.Object, NullLogger<VehicleServiceClient>.Instance);
+        var client = new VehicleServiceClient(httpClient, NullLogger<VehicleServiceClient>.Instance);
 
         // Act
         var result = (await client.GetVehiclesAsync(registrationNumbers)).ToArray();
@@ -161,8 +166,11 @@ public class VehicleServiceClientTests
         var httpClient = new HttpClient(new PollyHandler(policyWrap)
         {
             InnerHandler = _mockHttpMessageHandler.Object
-        });
-        var client = new VehicleServiceClient(httpClient, _mockConfiguration.Object, NullLogger<VehicleServiceClient>.Instance);
+        })
+        {
+            BaseAddress = new Uri("http://localhost:5000")
+        };
+        var client = new VehicleServiceClient(httpClient, NullLogger<VehicleServiceClient>.Instance);
 
         // Trip the circuit
         await Assert.ThrowsAsync<HttpRequestException>(() => client.GetVehiclesAsync(registrationNumbers));
@@ -185,7 +193,8 @@ public class PollyHandler : DelegatingHandler
         _policy = policy;
     }
 
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+        CancellationToken cancellationToken)
     {
         return _policy.ExecuteAsync(ct => base.SendAsync(request, ct), cancellationToken);
     }
