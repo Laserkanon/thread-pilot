@@ -57,4 +57,25 @@ public static class HttpClientPolicies
                 }
             );
     }
+
+    public static IAsyncPolicy<HttpResponseMessage> GetSingleCallFallbackPolicy(ILogger logger)
+    {
+        return Policy<HttpResponseMessage>
+            .Handle<Exception>()
+            .FallbackAsync(
+                _ =>
+                {
+                    var emptyResponse = new HttpResponseMessage(HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("null", System.Text.Encoding.UTF8, "application/json")
+                    };
+                    return Task.FromResult(emptyResponse);
+                },
+                delegateResult =>
+                {
+                    logger.Error("An unhandled exception occurred. Triggering fallback. Exception: {exception}", delegateResult.Exception?.Message);
+                    return Task.CompletedTask;
+                }
+            );
+    }
 }

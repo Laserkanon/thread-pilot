@@ -19,15 +19,17 @@ The solution is built using a distributed microservice architecture to ensure a 
 -   **`Vehicle.Service`**: A focused microservice that exposes a REST API for vehicle data. It has its own dedicated database, managed by **DbUp**.
 -   **`Insurance.Service`**: A microservice that provides insurance information for individuals. It performs internal orchestration by calling `Vehicle.Service` to enrich car insurance policies with vehicle details.
 
-### 1.2. Performance: Solving the N+1 Problem
+##  1.2. Vehicle Data Enrichment Strategy
+Our primary architectural assumption is that the downstream Vehicle.Service is a legacy system. As such, its load capacity is unknown, and we cannot assume it can be easily extended. Our entire data enrichment strategy is therefore built defensively to respect these constraints.
 
-A critical design consideration was ensuring performant integration between services, especially when fetching vehicle details for multiple car insurances. To avoid the classic "N+1 query" problem, the `InsuranceService` is explicitly designed to be efficient by making a **single, batched API call**:
-1.  It retrieves all insurances for a given person.
-2.  It gathers all unique `CarRegistrationNumber` values from the policies.
-3.  It sends **one** request to `Vehicle.Service` with all registration numbers.
-4.  It maps the results back to the corresponding insurance policies in memory.
+The default and safest method for fetching vehicle data is to make concurrent, distinct calls to the GetVehicleAsync(registrationNumber) endpoint. This approach avoids placing sequential calls that would have a risk of timing out or be too slow, while also limiting the vehicle service to only look up what it really must by using distinct registration numbers. To prevent overwhelming the Vehicle.Service, the level of concurrency is strictly controlled by the MaxDegreeOfParallelism configuration value, which acts as a vital safety valve. As we mentioned, the vehicle service's performance is unknown, and we placed a configurable parameter with a value of 5 concurrent requests as a starting point, but it can be easily configured depending on the load. Furthermore, all HTTP communication is wrapped in resilience policies, such as Retry and Circuit Breaker, to handle transient network errors and service unavailability gracefully.
 
-This efficient approach ensures that even if a person has many car insurances, the system load remains minimal.
+However, it is unclear how difficult it would be to change the legacy system. We imagined that if a developer on that team could expose a more efficient endpoint, let's say a batch variant, we would prefer to use it, as it would significantly reduce the overhead of multiple HTTP requests and also increase database efficiency (single vs. multiple lookups). To demonstrate this pattern, we have implemented a client method (GetVehiclesBatchAsync) that could consume such an endpoint.
+
+To provide flexibility and safety, this entire process is controlled by two distinct feature toggles:
+
+EnableVehicleEnrichment: This acts as a global "kill-switch." If the enrichment process causes any issues in production, this toggle can be set to false to disable all calls to the Vehicle.Service entirely.
+EnableBatchVehicleCall: This allows an operator to switch between the two strategies. By default, it is false, using the safe, concurrent single-call method. If the Vehicle.Service is ever updated with a trusted batch endpoint, this can be switched to true to gain the performance benefits.
 
 ### 1.3. Dependency Injection (DI)
 

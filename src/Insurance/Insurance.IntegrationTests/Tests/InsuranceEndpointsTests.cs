@@ -32,7 +32,7 @@ public class InsuranceEndpointsTests : IClassFixture<InsuranceTestWebApplication
         await testDataSeeder.InsertInsuranceAsync(personalIdentityNumber, ProductType.Pet, 10);
 
         _factory.MockVehicleClient
-            .Setup(c => c.GetVehiclesAsync(It.Is<string[]>(arr => arr.Contains(regNumber))))
+            .Setup(c => c.GetVehiclesConcurrentlyAsync(It.Is<string[]>(arr => arr.Contains(regNumber))))
             .ReturnsAsync(new List<Insurance.Service.Models.VehicleDetails>
             {
                 new() { RegistrationNumber = regNumber, Make = "Volvo" }

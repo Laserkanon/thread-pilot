@@ -53,7 +53,10 @@ public class InsuranceService : IInsuranceService
             .Distinct() //No need to fetch duplicates
             .ToArray();
 
-        var vehicleDetails = await _vehicleServiceClient.GetVehiclesAsync(registrationNumbers);
+        var vehicleDetails = _featureToggleService.IsBatchVehicleCallEnabled()
+            ? await _vehicleServiceClient.GetVehiclesBatchAsync(registrationNumbers)
+            : await _vehicleServiceClient.GetVehiclesConcurrentlyAsync(registrationNumbers);
+        
         var vehicleDict = vehicleDetails.ToDictionary(v => v.RegistrationNumber);
 
         foreach (var insurance in carInsurances)

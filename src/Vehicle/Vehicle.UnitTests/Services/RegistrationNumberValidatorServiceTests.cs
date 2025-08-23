@@ -77,7 +77,7 @@ namespace Vehicle.UnitTests.Services
         public void Validate_WithMoreThan500RegistrationNumbers_TruncatesList()
         {
             // Arrange
-            var registrationNumbers = Enumerable.Range(1, 501).Select(i => $"ABC-123").ToArray();
+            var registrationNumbers = Enumerable.Range(1, 501).Select(_ => $"ABC-123").ToArray();
 
             // Act
             var result = _sut.Validate(registrationNumbers);
@@ -90,7 +90,7 @@ namespace Vehicle.UnitTests.Services
         public void Validate_WithMoreThan500RegistrationNumbers_LogsWarning()
         {
             // Arrange
-            var registrationNumbers = Enumerable.Range(1, 501).Select(i => $"ABC-123").ToArray();
+            var registrationNumbers = Enumerable.Range(1, 501).Select(_ => $"ABC-123").ToArray();
 
             // Act
             _sut.Validate(registrationNumbers);
