@@ -1,88 +1,149 @@
+#!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Configures secrets for both local and Docker Compose development.
+    Initializes local development environment:
+      - Trusts .NET dev cert
+      - Applies secrets from secrets.local.json to user-secrets,
+        scoped per project based on top-level section name.
+      - Generates merged .env file for Docker Compose.
 .DESCRIPTION
-    This script reads a single password from 'secrets.local.json', and uses it to configure both
-    the .env file for Docker Compose and the .NET User Secrets for local development.
+    - secrets.local.json is structured by project name:
+        {
+          "MyService.ProjectA": { "Key1": "Value1", "Section": { "Key2": "Value2" } },
+          "MyService.ProjectB": { "Key3": "Value3" }
+        }
+    - Each section only applies to its corresponding project.
+    - No project names are hardcoded in the script.
 .NOTES
-    - Requires .NET SDK to be installed.
-    - Before running, copy 'secrets.local.json.template' to 'secrets.local.json' and populate the password.
+    - Requires .NET SDK
+    - Project name in JSON must match .csproj file name
 #>
+
+param(
+    [string] $RootPath  # optional explicit repo root
+)
 
 $ErrorActionPreference = "Stop"
 
-# --- Configure Development Certificate ---
-Write-Host "Configuring .NET development certificate..."
-try {
-    dotnet dev-certs https --trust
-    Write-Host "Development certificate configured successfully."
-}
-catch {
-    Write-Warning "Failed to configure the development certificate automatically. You may need to run 'dotnet dev-certs https --trust' manually with administrator privileges."
+# --- Recursive function to handle nested secrets for .NET User Secrets ---
+function Set-SecretsRecursively {
+    param(
+        $ProjectObject,
+        $ProjectPath,
+        [string]$KeyPrefix = ""
+    )
+
+    foreach ($prop in $ProjectObject.PSObject.Properties) {
+        $key = if ($KeyPrefix) { "$KeyPrefix`:$($prop.Name)" } else { $prop.Name }
+        $value = $prop.Value
+
+        if ($value -is [System.Management.Automation.PSCustomObject]) {
+            Set-SecretsRecursively -ProjectObject $value -ProjectPath $ProjectPath -KeyPrefix $key
+        }
+        else {
+            Write-Host "   - Setting $key"
+            dotnet user-secrets set $key "$value" --project $ProjectPath | Out-Null
+        }
+    }
 }
 
-# In environments where $PSScriptRoot is not available, fall back to the current directory.
-if ($PSScriptRoot) {
-    $executionRoot = $PSScriptRoot
+# --- Configure Development Certificate ---
+Write-Host "🔐 Configuring .NET development certificate..."
+try {
+    dotnet dev-certs https --trust | Out-Null
+    Write-Host "✅ Development certificate configured successfully."
+}
+catch {
+    Write-Warning "⚠️ Failed to configure the development certificate automatically. You may need to run 'dotnet dev-certs https --trust' manually with administrator privileges."
+}
+
+# Determine repo root
+if ($RootPath) {
+    $executionRoot = $RootPath
+} elseif ($PSScriptRoot) {
+    $executionRoot = Get-Location
 } else {
     $executionRoot = Get-Location
 }
 
 $secretsFile = Join-Path $executionRoot "secrets.local.json"
-
 if (-not (Test-Path $secretsFile)) {
-    Write-Error "The secrets file '$secretsFile' was not found."
-    Write-Host "Please copy 'secrets.local.json.template' to 'secrets.local.json' and fill in your password."
+    Write-Error "❌ The secrets file '$secretsFile' was not found."
+    Write-Host "👉 Please copy 'secrets.local.json.template' to 'secrets.local.json' and fill it in."
     exit 1
 }
 
-# --- Read the shared secret ---
-try {
-    $secretsConfig = Get-Content $secretsFile -Raw | ConvertFrom-Json
-    $password = $secretsConfig.DB_SA_PASSWORD
-    if ([string]::IsNullOrEmpty($password)) {
-        throw "DB_SA_PASSWORD is empty or not found in $secretsFile"
+Write-Host "🔑 Reading secrets from $secretsFile ..."
+$secretsConfig = Get-Content $secretsFile -Raw | ConvertFrom-Json
+
+# --- Create .env file (merged and flattened from all secrets) ---
+$envFile = Join-Path $executionRoot ".env"
+Write-Host "📝 Generating merged and flattened .env file for Docker Compose..."
+
+$envVars = @{} # Use a hashtable to store unique, flattened keys.
+
+# Recursive helper function to flatten the JSON properties
+function Add-ToEnvHashtable {
+    param(
+        $ConfigObject,
+        [string]$Prefix = ""
+    )
+    foreach ($prop in $ConfigObject.PSObject.Properties) {
+        # Docker Compose .env files don't handle dots or colons well in keys.
+        # Replace them with double underscores, which is also the .NET convention.
+        $key = if ([string]::IsNullOrEmpty($Prefix)) { $prop.Name } else { "$Prefix`__$($prop.Name)" }
+        $key = $key -replace "[:.]", "__"
+        $value = $prop.Value
+
+        if ($value -is [System.Management.Automation.PSCustomObject]) {
+            Add-ToEnvHashtable -ConfigObject $value -Prefix $key
+        }
+        else {
+            $envVars[$key] = $value
+        }
     }
 }
-catch {
-    Write-Error "Failed to parse '$secretsFile' or find DB_SA_PASSWORD. Please ensure it is valid JSON with a 'DB_SA_PASSWORD' key."
-    exit 1
+
+# Process all top-level sections from secrets.local.json
+foreach ($proj in $secretsConfig.PSObject.Properties) {
+    Add-ToEnvHashtable -ConfigObject $proj.Value
 }
 
-# --- Configure Docker Compose .env file ---
-$envFile = Join-Path $executionRoot ".env"
-Write-Host "Generating .env file for Docker Compose..."
-Set-Content -Path $envFile -Value "DB_SA_PASSWORD=$password"
-Write-Host ".env file created successfully."
+# Convert the hashtable to an array of "KEY=VALUE" strings and save to file
+$lines = $envVars.GetEnumerator() | ForEach-Object { "$($_.Name)=$($_.Value)" }
+Set-Content -Path $envFile -Value ($lines | Sort-Object) -Encoding UTF8
+Write-Host "✅ .env file created at $envFile"
 
-# --- Configure .NET User Secrets ---
-Write-Host "`nConfiguring .NET User Secrets for local development..."
 
-$projects = @{
-    "Insurance.Service" = "Server=localhost,1433;Database=InsuranceDb;User ID=sa;Password=$password;Encrypt=True;TrustServerCertificate=True;"
-    "Vehicle.Service"   = "Server=localhost,1433;Database=VehicleDb;User ID=sa;Password=$password;Encrypt=True;TrustServerCertificate=True;"
-}
+# --- Apply to .NET User Secrets ---
+Write-Host "`n📦 Configuring .NET User Secrets..."
 
-foreach ($entry in $projects.GetEnumerator()) {
-    $projectName = $entry.Name
-    $connectionString = $entry.Value
+$updatedProjects = @()
 
-    $serviceName = $projectName.Split('.')[0]
-    $projectPath = Join-Path $executionRoot "src/$serviceName/$projectName"
+foreach ($proj in $secretsConfig.PSObject.Properties) {
+    $projectName = $proj.Name
+    $projectPathObject = Get-ChildItem -Path (Join-Path $executionRoot "src") -Recurse -Filter "$projectName.csproj" | Select-Object -First 1
 
-    if (-not (Test-Path $projectPath)) {
-        Write-Warning "Project path not found for '$projectName' at '$projectPath'. Skipping."
+    if (-not $projectPathObject) {
+        Write-Warning "⚠️ Could not find .csproj for $projectName. Skipping."
         continue
     }
 
-    Write-Host "Configuring secrets for project: $projectName"
+    $projectPath = $projectPathObject.FullName
+    Write-Host "`n→ Project: $projectPath"
+    $updatedProjects += $projectName
 
-    # Initialize user secrets for the project.
-    dotnet user-secrets init --project $projectPath
+    # Init secrets if missing
+    dotnet user-secrets init --project $projectPath | Out-Null
 
-    # Set the connection string secret.
-    Write-Host "  - Setting secret: 'ConnectionStrings:Default'"
-    dotnet user-secrets set "ConnectionStrings:Default" "$connectionString" --project $projectPath
+    # Call the recursive function for .NET secrets
+    Set-SecretsRecursively -ProjectObject $proj.Value -ProjectPath $projectPath
 }
 
-Write-Host "`nSecrets configured successfully for all environments."
+Write-Host "`n🎉 Secrets applied successfully."
+if ($updatedProjects.Count -gt 0) {
+    Write-Host "📂 Updated projects:"
+    $updatedProjects | ForEach-Object { Write-Host "   - $_" }
+} else {
+    Write-Host "ℹ️ No projects were updated (no matching sections)."
+}

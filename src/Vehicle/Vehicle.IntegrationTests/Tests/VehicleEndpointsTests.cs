@@ -1,27 +1,19 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using OpenTelemetry.Metrics;
+using Vehicle.IntegrationTests.Infrastructure;
 using Vehicle.IntegrationTests.TesHelpers;
 
 namespace Vehicle.IntegrationTests.Tests;
 
-public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program>>
+public class VehicleEndpointsTests : IClassFixture<VehicleTestWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
+    private readonly VehicleTestWebApplicationFactory _factory;
 
-    public VehicleEndpointsTests(WebApplicationFactory<Program> factory)
+    public VehicleEndpointsTests(VehicleTestWebApplicationFactory factory)
     {
-        _factory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                services.AddScoped<ITestDataSeeder, TestDataSeeder>();
-                services.AddOpenTelemetry().WithMetrics(builder => builder.AddPrometheusExporter());
-            });
-        });
+        _factory = factory;
     }
 
     [Fact]
@@ -32,7 +24,7 @@ public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program
         var seeder = scope.ServiceProvider.GetRequiredService<ITestDataSeeder>();
         await seeder.InsertVehicleAsync(registrationNumber, "TestMake");
 
-        var client = _factory.CreateClient();
+        var client = _factory.CreateAuthenticatedClient();
 
         // Act
         var response = await client.GetAsync($"/api/v1/vehicles/{registrationNumber}");
@@ -41,7 +33,7 @@ public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var vehicle = await response.Content.ReadFromJsonAsync<Service.Contracts.Vehicle>();
         vehicle.Should().NotBeNull();
-        vehicle!.RegistrationNumber.Should().Be(registrationNumber);
+        vehicle.RegistrationNumber.Should().Be(registrationNumber);
         vehicle.Make.Should().Be("TestMake");
     }
 
@@ -50,7 +42,7 @@ public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program
     {
         // Arrange: ensure you don't insert this reg number
         const string registrationNumber = "MISSING";
-        var client = _factory.CreateClient();
+        var client = _factory.CreateAuthenticatedClient();
 
         // Act
         var response = await client.GetAsync($"/api/v1/vehicles/{registrationNumber}");
@@ -60,10 +52,36 @@ public class VehicleEndpointsTests : IClassFixture<WebApplicationFactory<Program
     }
 
     [Fact]
-    public async Task GetMetrics_ReturnsOkAndPrometheusContent()
+    public async Task GetVehicle_WithoutApiKey_ReturnsUnauthorized()
     {
         // Arrange
         var client = _factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/api/v1/vehicles/some-reg");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetVehiclesBatch_WithValidToken_ReturnsOk()
+    {
+        // Arrange
+        var client = _factory.CreateAuthenticatedClient();
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/v1/vehicles/batch", new[] { "reg1", "reg2" });
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task GetMetrics_ReturnsOkAndPrometheusContent()
+    {
+        // Arrange
+        var client = _factory.CreateAuthenticatedClient();
 
         // Act
         var response = await client.GetAsync("/metrics");

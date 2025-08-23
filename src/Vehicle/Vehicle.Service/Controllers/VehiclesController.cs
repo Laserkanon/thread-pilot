@@ -1,4 +1,5 @@
 using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Vehicle.Service.Extensions;
 using Vehicle.Service.Repositories;
@@ -23,6 +24,7 @@ public class VehiclesController : ControllerBase
         _registrationNumberValidatorService = registrationNumberValidatorService;
     }
 
+    [Authorize]
     [HttpGet("{registrationNumber}")]
     public async Task<IActionResult> GetVehicle(string registrationNumber)
     {
@@ -46,6 +48,7 @@ public class VehiclesController : ControllerBase
         return Ok(vehicleContract);
     }
 
+    [Authorize]
     [HttpPost("batch")]
     public async Task<IActionResult> GetVehiclesBatch([FromBody] string[] registrationNumbers)
     {

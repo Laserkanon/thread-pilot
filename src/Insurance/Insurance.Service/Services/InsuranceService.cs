@@ -50,7 +50,7 @@ public class InsuranceService : IInsuranceService
 
         var registrationNumbers = carInsurances
             .Select(i => i.CarRegistrationNumber!)
-            .Distinct()
+            .Distinct() //No need to fetch duplicates
             .ToArray();
 
         var vehicleDetails = await _vehicleServiceClient.GetVehiclesAsync(registrationNumbers);

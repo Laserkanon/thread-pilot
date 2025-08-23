@@ -1,3 +1,4 @@
+using Infrastructure.Hosting;
 using Insurance.Service.Contracts;
 using Microsoft.Extensions.Configuration;
 
@@ -8,7 +9,7 @@ public sealed class TestDataSeeder : ITestDataSeeder
     private readonly string _cs;
     public TestDataSeeder(IConfiguration cfg)
     {
-        _cs = cfg.GetConnectionString("Default")
+        _cs = cfg.RequireSqlConnectionString()
               ?? throw new InvalidOperationException("ConnectionStrings:Default not configured");
     }
 

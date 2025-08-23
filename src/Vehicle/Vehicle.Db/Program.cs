@@ -1,16 +1,16 @@
 using DbUp;
+using Infrastructure.Hosting;
 using Microsoft.Extensions.Configuration;
 
 var builder = new ConfigurationBuilder()
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddUserSecrets<Program>()
     .AddEnvironmentVariables()
     .AddCommandLine(args);
 var config = builder.Build();
 
-var connectionString = config.GetConnectionString("Default")
-                    ?? config["connection"]
-                    ?? throw new InvalidOperationException("No connection string. Set ConnectionStrings:Default or pass --connection=<...>");
+var connectionString = config.RequireSqlConnectionString();
 
 EnsureDatabase.For.SqlDatabase(connectionString);
 

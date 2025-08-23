@@ -1,6 +1,7 @@
 using FluentValidation;
 using Insurance.Service.Extensions;
 using Insurance.Service.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Insurance.Service.Controllers;
@@ -19,6 +20,7 @@ public class InsurancesController : ControllerBase
     }
 
     [HttpGet("{personalIdentityNumber}")]
+    [Authorize]
     public async Task<IActionResult> GetInsurances(string personalIdentityNumber)
     {
         var validationResult = await _pinValidator.ValidateAsync(personalIdentityNumber);

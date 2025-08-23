@@ -1,38 +1,21 @@
 using System.Net;
 using System.Net.Http.Json;
 using FluentAssertions;
+using Insurance.IntegrationTests.Infrastructure;
 using Insurance.IntegrationTests.TestHelpers;
-using Insurance.Service.Clients;
 using Insurance.Service.Contracts;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using OpenTelemetry.Metrics;
 
 namespace Insurance.IntegrationTests.Tests;
 
-public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Program>>
+public class InsuranceEndpointsTests : IClassFixture<InsuranceTestWebApplicationFactory>
 {
-    private readonly WebApplicationFactory<Program> _factory;
-    private readonly Mock<IVehicleServiceClient> _mockVehicleClient;
+    private readonly InsuranceTestWebApplicationFactory _factory;
 
-    public InsuranceEndpointsTests(WebApplicationFactory<Program> factory)
+    public InsuranceEndpointsTests(InsuranceTestWebApplicationFactory factory)
     {
-        _mockVehicleClient = new Mock<IVehicleServiceClient>();
-
-        _factory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.ConfigureServices(services =>
-            {
-                //Add service that can setup test data
-                services.AddScoped<ITestDataSeeder, TestDataSeeder>();
-                
-                //Mock external service
-                services.AddScoped<IVehicleServiceClient>(_ => _mockVehicleClient.Object);
-
-                services.AddOpenTelemetry().WithMetrics(builder => builder.AddPrometheusExporter());
-            });
-        });
+        _factory = factory;
     }
 
     [Fact]
@@ -48,14 +31,14 @@ public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Progr
         await testDataSeeder.InsertInsuranceAsync(personalIdentityNumber, ProductType.Car, 30, regNumber);
         await testDataSeeder.InsertInsuranceAsync(personalIdentityNumber, ProductType.Pet, 10);
 
-        _mockVehicleClient
+        _factory.MockVehicleClient
             .Setup(c => c.GetVehiclesAsync(It.Is<string[]>(arr => arr.Contains(regNumber))))
             .ReturnsAsync(new List<Insurance.Service.Models.VehicleDetails>
             {
                 new() { RegistrationNumber = regNumber, Make = "Volvo" }
             });
 
-        var client = _factory.CreateClient();
+        var client = _factory.CreateAuthenticatedClient();
 
         // Act
         var response = await client.GetAsync($"/api/v1/insurances/{personalIdentityNumber}");
@@ -77,7 +60,7 @@ public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Progr
     {
         // Arrange
         const string pin = "INVALID_PIN"; // expected to fail validation
-        var client = _factory.CreateClient();
+        var client = _factory.CreateAuthenticatedClient();
 
         // Act
         var response = await client.GetAsync($"/api/v1/insurances/{pin}");
@@ -87,10 +70,23 @@ public class InsuranceEndpointsTests : IClassFixture<WebApplicationFactory<Progr
     }
 
     [Fact]
-    public async Task GetMetrics_ReturnsOkAndPrometheusContent()
+    public async Task GetInsurances_WithoutApiKey_ReturnsUnauthorized()
     {
         // Arrange
         var client = _factory.CreateClient();
+
+        // Act
+        var response = await client.GetAsync("/api/v1/insurances/some-pin");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task GetMetrics_ReturnsOkAndPrometheusContent()
+    {
+        // Arrange
+        var client = _factory.CreateAuthenticatedClient();
 
         // Act
         var response = await client.GetAsync("/metrics");

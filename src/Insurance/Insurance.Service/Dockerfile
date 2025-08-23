@@ -1,3 +1,4 @@
+## Env variables are provided through kubernetes configmaps and secrets
 # syntax=docker/dockerfile:1
 # -------- build stage --------
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build

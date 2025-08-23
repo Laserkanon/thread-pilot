@@ -9,14 +9,10 @@ public class VehicleServiceClient : IVehicleServiceClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<VehicleServiceClient> _logger;
 
-    public VehicleServiceClient(HttpClient httpClient, IConfiguration configuration, ILogger<VehicleServiceClient> logger)
+    public VehicleServiceClient(HttpClient httpClient, ILogger<VehicleServiceClient> logger)
     {
-        var baseUrl = configuration.GetValue<string>("VehicleService:BaseUrl")
-            ?? throw new InvalidOperationException("VehicleService:BaseUrl is not configured.");
-
         _httpClient = httpClient;
         _logger = logger;
-        _httpClient.BaseAddress = new Uri(baseUrl);
     }
 
     public async Task<IEnumerable<Models.VehicleDetails>> GetVehiclesAsync(string[] registrationNumbers)
@@ -27,7 +23,7 @@ public class VehicleServiceClient : IVehicleServiceClient
         }
 
         var response = await _httpClient.PostAsJsonAsync("/api/v1/vehicles/batch", registrationNumbers);
-
+        
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
         {
             _logger.LogWarning("A non-successful status code {StatusCode} was received from the Vehicle Service. RegistrationNumbers: {RegistrationNumbers}", response.StatusCode, registrationNumbers);

@@ -1,4 +1,5 @@
 using Dapper;
+using Infrastructure.Hosting;
 using Microsoft.Data.SqlClient;
 
 namespace Insurance.Service.Repositories;
@@ -9,7 +10,7 @@ public class InsuranceRepository : IInsuranceRepository
 
     public InsuranceRepository(IConfiguration configuration)
     {
-        _connectionString = configuration.GetConnectionString("Default")!;
+        _connectionString = configuration.RequireSqlConnectionString();
     }
 
     public async Task<Models.Insurance[]> GetInsurancesByPinAsync(string personalIdentityNumber)
