@@ -18,7 +18,7 @@ public class VehicleServiceClient : IVehicleServiceClient
     {
         _httpClient = httpClient;
         _logger = logger;
-        _maxDegreeOfParallelism = configuration.GetValue<int>("Vehicle.Service.Client:MaxDegreeOfParallelism", 5);
+        _maxDegreeOfParallelism = configuration.GetValue("Vehicle.Service.Client:MaxDegreeOfParallelism", 5);
     }
 
     public async Task<IEnumerable<Models.VehicleDetails>> GetVehiclesBatchAsync(string[] registrationNumbers)
@@ -50,7 +50,7 @@ public class VehicleServiceClient : IVehicleServiceClient
 
         await Parallel.ForEachAsync(registrationNumbers,
             new ParallelOptions { MaxDegreeOfParallelism = _maxDegreeOfParallelism },
-            async (regNumber, cancellationToken) =>
+            async (regNumber, _) =>
             {
                 var vehicle = await GetVehicleAsync(regNumber);
                 if (vehicle != null)

@@ -17,7 +17,7 @@ public static class SerilogHostingExtensions
             .WriteTo.Console()
             .CreateBootstrapLogger();
 
-        builder.Host.UseSerilog((ctx, services, cfg) => cfg
+        builder.Host.UseSerilog((_, _, cfg) => cfg
             .MinimumLevel.Information()
             .Enrich.FromLogContext()
             .WriteTo.Console());

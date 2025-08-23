@@ -56,6 +56,7 @@ public class InsuranceService : IInsuranceService
         var vehicleDetails = _featureToggleService.IsBatchVehicleCallEnabled()
             ? await _vehicleServiceClient.GetVehiclesBatchAsync(registrationNumbers)
             : await _vehicleServiceClient.GetVehiclesConcurrentlyAsync(registrationNumbers);
+        
         var vehicleDict = vehicleDetails.ToDictionary(v => v.RegistrationNumber);
 
         foreach (var insurance in carInsurances)

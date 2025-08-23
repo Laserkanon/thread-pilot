@@ -19,29 +19,19 @@ The solution is built using a distributed microservice architecture to ensure a 
 -   **`Vehicle.Service`**: A focused microservice that exposes a REST API for vehicle data. It has its own dedicated database, managed by **DbUp**.
 -   **`Insurance.Service`**: A microservice that provides insurance information for individuals. It performs internal orchestration by calling `Vehicle.Service` to enrich car insurance policies with vehicle details.
 
-### 1.2. Performance: Solving the N+1 Problem
+##  1.2. Vehicle Data Enrichment Strategy
+Our primary architectural assumption is that the downstream Vehicle.Service is a legacy system. As such, its load capacity is unknown, and we cannot assume it can be easily extended. Our entire data enrichment strategy is therefore built defensively to respect these constraints.
 
-A critical design consideration was ensuring performant integration between services, especially when fetching vehicle details for multiple car insurances. To avoid the classic "N+1 query" problem, the `InsuranceService` is explicitly designed to be efficient by making a **single, batched API call**:
-1.  It retrieves all insurances for a given person.
-2.  It gathers all unique `CarRegistrationNumber` values from the policies.
-3.  It sends **one** request to `Vehicle.Service` with all registration numbers.
-4.  It maps the results back to the corresponding insurance policies in memory.
+The default and safest method for fetching vehicle data is to make concurrent, distinct calls to the GetVehicleAsync(registrationNumber) endpoint. This approach avoids placing sequential calls that would have a risk of timing out or be too slow, while also limiting the vehicle service to only look up what it really must by using distinct registration numbers. To prevent overwhelming the Vehicle.Service, the level of concurrency is strictly controlled by the MaxDegreeOfParallelism configuration value, which acts as a vital safety valve. As we mentioned, the vehicle service's performance is unknown, and we placed a configurable parameter with a value of 5 concurrent requests as a starting point, but it can be easily configured depending on the load. Furthermore, all HTTP communication is wrapped in resilience policies, such as Retry and Circuit Breaker, to handle transient network errors and service unavailability gracefully.
 
-This efficient approach ensures that even if a person has many car insurances, the system load remains minimal.
+However, it is unclear how difficult it would be to change the legacy system. We imagined that if a developer on that team could expose a more efficient endpoint, let's say a batch variant, we would prefer to use it, as it would significantly reduce the overhead of multiple HTTP requests and also increase database efficiency (single vs. multiple lookups). To demonstrate this pattern, we have implemented a client method (GetVehiclesBatchAsync) that could consume such an endpoint.
 
-### 1.3. Vehicle Data Enrichment Strategy
+To provide flexibility and safety, this entire process is controlled by two distinct feature toggles:
 
-While a batch endpoint is the ideal solution, this project accounts for the reality that the downstream `Vehicle.Service` is a legacy system. Its load capacity is unknown, and it may not be easily extendable. To handle this, a defensive, flexible, and resilient strategy has been implemented.
+EnableVehicleEnrichment: This acts as a global "kill-switch." If the enrichment process causes any issues in production, this toggle can be set to false to disable all calls to the Vehicle.Service entirely.
+EnableBatchVehicleCall: This allows an operator to switch between the two strategies. By default, it is false, using the safe, concurrent single-call method. If the Vehicle.Service is ever updated with a trusted batch endpoint, this can be switched to true to gain the performance benefits.
 
--   **Feature Toggle Control**: A feature toggle, `EnableBatchVehicleCall`, allows operators to switch the data fetching strategy at runtime.
-    -   **Batch Mode (`true`)**: By default, the system uses the efficient `GetVehiclesBatchAsync` method. However, the current implementation sends all registration numbers in a single request. This could be dangerous for very large datasets, potentially overwhelming the `Vehicle.Service`. A task has been created to implement "chunking" to break large requests into smaller, safer batches.
-    -   **Individual Call Mode (`false`)**: As a fallback, the system can be switched to make concurrent, individual calls to the `GetVehicleAsync(registrationNumber)` endpoint. This mode is resilient to partial failures; if one vehicle call fails, it will not prevent others from succeeding.
-
--   **Concurrency Management and Tuning**: Because the load capacity of the `Vehicle.Service` is unclear, the concurrency of the individual-call mode is not unlimited. It is controlled by the `MaxDegreeOfParallelism` setting in `appsettings.json`. This acts as a critical safety valve, protecting both the client's thread pool and the legacy server from being overloaded. This value will require further investigation and load testing in a production-like environment to determine the optimal setting.
-
-This dual strategy ensures that the system is optimized for the best-case scenario (batching) while remaining resilient and configurable for less ideal, real-world conditions.
-
-### 1.4. Dependency Injection (DI)
+### 1.3. Dependency Injection (DI)
 
 The project uses the standard, built-in .NET dependency injection container. The setup is clean, straightforward, and configured directly in `Program.cs`, following modern .NET best practices. There are no custom or "old-fashioned" DI frameworks or installers.
 
@@ -55,15 +45,15 @@ builder.Services.AddScoped<IInsuranceService, InsuranceService>();
 builder.Services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>();
 ```
 
-### 1.5. Data Access
+### 1.4. Data Access
 
 **Dapper** was chosen as the micro-ORM for data access. It offers high performance and a lightweight abstraction over raw ADO.NET without the complexity of a full ORM like Entity Framework, which was deemed unnecessary for this project's scope. Database migrations are handled by **DbUp**, ensuring version-controlled and repeatable schema changes.
 
-### 1.6. Input Validation
+### 1.5. Input Validation
 
 **FluentValidation** is used for validating API inputs. This choice promotes a clean and unified approach to validation logic, separating it from the core business logic of the controllers and services. It provides a robust way to define complex validation rules and results in a clear separation of concerns.
 
-### 1.7. Shared Contracts
+### 1.6. Shared Contracts
 
 The solution uses dedicated `.Contracts` projects (e.g., `Insurance.Service.Contracts`) to define the public data models (Data Transfer Objects or DTOs) that are shared between services. This is a critical architectural pattern for several reasons:
 
@@ -72,7 +62,7 @@ The solution uses dedicated `.Contracts` projects (e.g., `Insurance.Service.Cont
 -   **Service Decoupling**: A service (like `Insurance.Service`) can consume the contract of another service (`Vehicle.Service.Contracts`) without needing a dependency on its full implementation, reducing coupling and improving build times.
 -   **Clear Versioning**: By having the API contract defined in a separate assembly, it becomes easier to manage versioning and support multiple versions of a contract simultaneously in the future.
 
-### 1.8. Authentication and Authorization
+### 1.7. Authentication and Authorization
 
 The services implement a flexible, dual-mode JWT-based authentication and authorization strategy:
 
@@ -87,7 +77,7 @@ Authorization is handled using policies based on scopes and roles. The following
 
 This approach ensures that the APIs are secure by default while maintaining a seamless and simple local development experience.
 
-### 1.9. Feature Toggles
+### 1.8. Feature Toggles
 
 The solution uses a simple feature toggle system to enable or disable certain functionality at runtime without requiring a redeployment. The implementation is based on the following principles:
 
