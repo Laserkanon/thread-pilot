@@ -20,8 +20,9 @@ public class InsuranceServiceTests
         _mockVehicleServiceClient = new Mock<IVehicleServiceClient>();
         _mockFeatureToggleService = new Mock<IFeatureToggleService>();
 
-        // Always enable the feature toggle for these tests unless specified otherwise
+        // Always enable the feature toggles for these tests unless specified otherwise
         _mockFeatureToggleService.Setup(f => f.IsVehicleEnrichmentEnabled()).Returns(true);
+        _mockFeatureToggleService.Setup(f => f.IsBatchVehicleCallEnabled()).Returns(true);
 
         _insuranceService = new InsuranceService(
             _mockInsuranceRepository.Object,
@@ -40,7 +41,7 @@ public class InsuranceServiceTests
             new() { InsuranceId = 2, PersonalIdentityNumber = pin, Product = Service.Models.ProductType.Car, MonthlyCost = 30, CarRegistrationNumber = "ABC123" }
         };
         _mockInsuranceRepository.Setup(r => r.GetInsurancesByPinAsync(pin)).ReturnsAsync(insuranceEntities);
-        _mockVehicleServiceClient.Setup(c => c.GetVehiclesAsync(It.IsAny<string[]>())).ReturnsAsync(new List<VehicleDetails>());
+        _mockVehicleServiceClient.Setup(c => c.GetVehiclesBatchAsync(It.IsAny<string[]>())).ReturnsAsync(new List<VehicleDetails>());
 
         // Act
         var result = (await _insuranceService.GetInsurancesForPinAsync(pin)).ToList();
@@ -69,13 +70,13 @@ public class InsuranceServiceTests
         };
 
         _mockInsuranceRepository.Setup(r => r.GetInsurancesByPinAsync(pin)).ReturnsAsync(insuranceEntities);
-        _mockVehicleServiceClient.Setup(c => c.GetVehiclesAsync(It.Is<string[]>(n => n.Contains(regNr)))).ReturnsAsync(vehicleContracts);
+        _mockVehicleServiceClient.Setup(c => c.GetVehiclesBatchAsync(It.Is<string[]>(n => n.Contains(regNr)))).ReturnsAsync(vehicleContracts);
 
         // Act
         var result = (await _insuranceService.GetInsurancesForPinAsync(pin)).ToList();
 
         // Assert
-        _mockVehicleServiceClient.Verify(c => c.GetVehiclesAsync(It.Is<string[]>(n => n.Length == 1 && n[0] == regNr)), Times.Once);
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesBatchAsync(It.Is<string[]>(n => n.Length == 1 && n[0] == regNr)), Times.Once);
         result.Should().HaveCount(1);
         result[0].VehicleDetails.Should().NotBeNull();
         result[0].VehicleDetails!.Make.Should().Be("Tesla");
@@ -93,14 +94,14 @@ public class InsuranceServiceTests
             new() { InsuranceId = 3, PersonalIdentityNumber = pin, Product = Service.Models.ProductType.Car, CarRegistrationNumber = "CAR1" } // Duplicate
         };
         _mockInsuranceRepository.Setup(r => r.GetInsurancesByPinAsync(pin)).ReturnsAsync(insuranceEntities);
-        _mockVehicleServiceClient.Setup(c => c.GetVehiclesAsync(It.IsAny<string[]>())).ReturnsAsync(new List<VehicleDetails>());
+        _mockVehicleServiceClient.Setup(c => c.GetVehiclesBatchAsync(It.IsAny<string[]>())).ReturnsAsync(new List<VehicleDetails>());
 
         // Act
         await _insuranceService.GetInsurancesForPinAsync(pin);
 
         // Assert
         // Verify that the call was made only once with a distinct list of registration numbers
-        _mockVehicleServiceClient.Verify(c => c.GetVehiclesAsync(It.Is<string[]>(arr => arr.Length == 2 && arr.Contains("CAR1") && arr.Contains("CAR2"))), Times.Once);
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesBatchAsync(It.Is<string[]>(arr => arr.Length == 2 && arr.Contains("CAR1") && arr.Contains("CAR2"))), Times.Once);
     }
 
     [Fact]
@@ -114,7 +115,7 @@ public class InsuranceServiceTests
         };
         _mockInsuranceRepository.Setup(r => r.GetInsurancesByPinAsync(pin)).ReturnsAsync(insuranceEntities);
         // Vehicle service returns an empty list
-        _mockVehicleServiceClient.Setup(c => c.GetVehiclesAsync(It.IsAny<string[]>())).ReturnsAsync(new List<VehicleDetails>());
+        _mockVehicleServiceClient.Setup(c => c.GetVehiclesBatchAsync(It.IsAny<string[]>())).ReturnsAsync(new List<VehicleDetails>());
 
         // Act
         var result = (await _insuranceService.GetInsurancesForPinAsync(pin)).ToList();
@@ -140,7 +141,8 @@ public class InsuranceServiceTests
         var result = (await _insuranceService.GetInsurancesForPinAsync(pin)).ToList();
 
         // Assert
-        _mockVehicleServiceClient.Verify(c => c.GetVehiclesAsync(It.IsAny<string[]>()), Times.Never);
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesBatchAsync(It.IsAny<string[]>()), Times.Never);
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesConcurrentlyAsync(It.IsAny<string[]>()), Times.Never);
         result.First().VehicleDetails.Should().BeNull();
     }
 
@@ -157,7 +159,8 @@ public class InsuranceServiceTests
 
         // Assert
         result.Should().BeEmpty();
-        _mockVehicleServiceClient.Verify(c => c.GetVehiclesAsync(It.IsAny<string[]>()), Times.Never);
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesBatchAsync(It.IsAny<string[]>()), Times.Never);
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesConcurrentlyAsync(It.IsAny<string[]>()), Times.Never);
     }
 
     [Fact]
@@ -177,7 +180,8 @@ public class InsuranceServiceTests
 
         // Assert
         result.Should().HaveCount(2);
-        _mockVehicleServiceClient.Verify(c => c.GetVehiclesAsync(It.IsAny<string[]>()), Times.Never);
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesBatchAsync(It.IsAny<string[]>()), Times.Never);
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesConcurrentlyAsync(It.IsAny<string[]>()), Times.Never);
     }
 
     [Theory]
@@ -199,6 +203,47 @@ public class InsuranceServiceTests
         // Assert
         result.Should().HaveCount(1);
         result[0].VehicleDetails.Should().BeNull();
-        _mockVehicleServiceClient.Verify(c => c.GetVehiclesAsync(It.IsAny<string[]>()), Times.Never);
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesBatchAsync(It.IsAny<string[]>()), Times.Never);
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesConcurrentlyAsync(It.IsAny<string[]>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetInsurancesForPinAsync_WithBatchCallEnabled_ShouldCallGetVehiclesBatchAsync()
+    {
+        // Arrange
+        const string pin = "199001011234";
+        var insuranceEntities = new Insurance.Service.Models.Insurance[]
+        {
+            new() { InsuranceId = 1, PersonalIdentityNumber = pin, Product = Service.Models.ProductType.Car, CarRegistrationNumber = "CAR1" }
+        };
+        _mockInsuranceRepository.Setup(r => r.GetInsurancesByPinAsync(pin)).ReturnsAsync(insuranceEntities);
+        _mockFeatureToggleService.Setup(f => f.IsBatchVehicleCallEnabled()).Returns(true);
+
+        // Act
+        await _insuranceService.GetInsurancesForPinAsync(pin);
+
+        // Assert
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesBatchAsync(It.IsAny<string[]>()), Times.Once);
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesConcurrentlyAsync(It.IsAny<string[]>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetInsurancesForPinAsync_WithBatchCallDisabled_ShouldCallGetVehiclesConcurrentlyAsync()
+    {
+        // Arrange
+        const string pin = "199001011234";
+        var insuranceEntities = new Insurance.Service.Models.Insurance[]
+        {
+            new() { InsuranceId = 1, PersonalIdentityNumber = pin, Product = Service.Models.ProductType.Car, CarRegistrationNumber = "CAR1" }
+        };
+        _mockInsuranceRepository.Setup(r => r.GetInsurancesByPinAsync(pin)).ReturnsAsync(insuranceEntities);
+        _mockFeatureToggleService.Setup(f => f.IsBatchVehicleCallEnabled()).Returns(false);
+
+        // Act
+        await _insuranceService.GetInsurancesForPinAsync(pin);
+
+        // Assert
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesBatchAsync(It.IsAny<string[]>()), Times.Never);
+        _mockVehicleServiceClient.Verify(c => c.GetVehiclesConcurrentlyAsync(It.IsAny<string[]>()), Times.Once);
     }
 }

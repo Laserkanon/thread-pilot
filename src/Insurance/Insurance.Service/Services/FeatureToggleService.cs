@@ -14,4 +14,9 @@ public class FeatureToggleService : IFeatureToggleService
         // Default to false if the setting is missing or invalid
         return _configuration.GetValue<bool>(FeatureToggles.EnableVehicleEnrichment);
     }
+
+    public bool IsBatchVehicleCallEnabled()
+    {
+        return _configuration.GetValue<bool>(FeatureToggles.EnableBatchVehicleCall);
+    }
 }

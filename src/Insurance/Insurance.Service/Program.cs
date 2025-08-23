@@ -21,7 +21,7 @@ builder.Services.AddScoped<IInsuranceService, InsuranceService>();
 builder.Services.AddScoped<IFeatureToggleService, FeatureToggleService>();
 builder.Services.AddScoped<IValidator<string>, PersonalIdentifyNumberValidator>();
 
-// Typed HttpClient (resilience policies are app-specific)
+// Typed HttpClient for Vehicle Service
 builder.Services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>()
     .ConfigureHttpClientWithApiKey(VehicleHost.Name)
     .AddPolicyHandler((sp, _) => HttpClientPolicies.GetFallbackPolicy(sp.GetRequiredService<ILogger>()))

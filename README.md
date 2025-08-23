@@ -29,7 +29,19 @@ A critical design consideration was ensuring performant integration between serv
 
 This efficient approach ensures that even if a person has many car insurances, the system load remains minimal.
 
-### 1.3. Dependency Injection (DI)
+### 1.3. Vehicle Data Enrichment Strategy
+
+While a batch endpoint is the ideal solution, this project accounts for the reality that the downstream `Vehicle.Service` is a legacy system. Its load capacity is unknown, and it may not be easily extendable. To handle this, a defensive, flexible, and resilient strategy has been implemented.
+
+-   **Feature Toggle Control**: A feature toggle, `EnableBatchVehicleCall`, allows operators to switch the data fetching strategy at runtime.
+    -   **Batch Mode (`true`)**: By default, the system uses the efficient `GetVehiclesBatchAsync` method. However, the current implementation sends all registration numbers in a single request. This could be dangerous for very large datasets, potentially overwhelming the `Vehicle.Service`. A task has been created to implement "chunking" to break large requests into smaller, safer batches.
+    -   **Individual Call Mode (`false`)**: As a fallback, the system can be switched to make concurrent, individual calls to the `GetVehicleAsync(registrationNumber)` endpoint. This mode is resilient to partial failures; if one vehicle call fails, it will not prevent others from succeeding.
+
+-   **Concurrency Management and Tuning**: Because the load capacity of the `Vehicle.Service` is unclear, the concurrency of the individual-call mode is not unlimited. It is controlled by the `MaxDegreeOfParallelism` setting in `appsettings.json`. This acts as a critical safety valve, protecting both the client's thread pool and the legacy server from being overloaded. This value will require further investigation and load testing in a production-like environment to determine the optimal setting.
+
+This dual strategy ensures that the system is optimized for the best-case scenario (batching) while remaining resilient and configurable for less ideal, real-world conditions.
+
+### 1.4. Dependency Injection (DI)
 
 The project uses the standard, built-in .NET dependency injection container. The setup is clean, straightforward, and configured directly in `Program.cs`, following modern .NET best practices. There are no custom or "old-fashioned" DI frameworks or installers.
 
@@ -43,15 +55,15 @@ builder.Services.AddScoped<IInsuranceService, InsuranceService>();
 builder.Services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>();
 ```
 
-### 1.4. Data Access
+### 1.5. Data Access
 
 **Dapper** was chosen as the micro-ORM for data access. It offers high performance and a lightweight abstraction over raw ADO.NET without the complexity of a full ORM like Entity Framework, which was deemed unnecessary for this project's scope. Database migrations are handled by **DbUp**, ensuring version-controlled and repeatable schema changes.
 
-### 1.5. Input Validation
+### 1.6. Input Validation
 
 **FluentValidation** is used for validating API inputs. This choice promotes a clean and unified approach to validation logic, separating it from the core business logic of the controllers and services. It provides a robust way to define complex validation rules and results in a clear separation of concerns.
 
-### 1.6. Shared Contracts
+### 1.7. Shared Contracts
 
 The solution uses dedicated `.Contracts` projects (e.g., `Insurance.Service.Contracts`) to define the public data models (Data Transfer Objects or DTOs) that are shared between services. This is a critical architectural pattern for several reasons:
 
@@ -60,7 +72,7 @@ The solution uses dedicated `.Contracts` projects (e.g., `Insurance.Service.Cont
 -   **Service Decoupling**: A service (like `Insurance.Service`) can consume the contract of another service (`Vehicle.Service.Contracts`) without needing a dependency on its full implementation, reducing coupling and improving build times.
 -   **Clear Versioning**: By having the API contract defined in a separate assembly, it becomes easier to manage versioning and support multiple versions of a contract simultaneously in the future.
 
-### 1.7. Authentication and Authorization
+### 1.8. Authentication and Authorization
 
 The services implement a flexible, dual-mode JWT-based authentication and authorization strategy:
 
@@ -75,7 +87,7 @@ Authorization is handled using policies based on scopes and roles. The following
 
 This approach ensures that the APIs are secure by default while maintaining a seamless and simple local development experience.
 
-### 1.8. Feature Toggles
+### 1.9. Feature Toggles
 
 The solution uses a simple feature toggle system to enable or disable certain functionality at runtime without requiring a redeployment. The implementation is based on the following principles:
 
