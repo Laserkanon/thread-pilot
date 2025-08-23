@@ -27,11 +27,15 @@ jobs:
 
       - name: Apply Vehicle DB Migrations
         working-directory: ./src/Vehicle/Vehicle.Db
-        run: dotnet run --configuration Release -- --connection "Server=localhost,1433;Database=VehicleDb;User Id=sa;Password=${{ secrets.SA_PASSWORD }};TrustServerCertificate=True"
+        env:
+          DB_SA_PASSWORD: ${{secrets.SA_PASSWORD}}
+        run: dotnet run --configuration Release
 
       - name: Apply Insurance DB Migrations
+        env:
+          DB_SA_PASSWORD: ${{secrets.SA_PASSWORD}}
         working-directory: ./src/Insurance/Insurance.Db
-        run: dotnet run --configuration Release -- --connection "Server=localhost,1433;Database=InsuranceDb;User Id=sa;Password=${{ secrets.SA_PASSWORD }};TrustServerCertificate=True"
+        run: dotnet run --configuration Release
 
       - name: Run Unit Tests
         run: |
@@ -40,12 +44,12 @@ jobs:
 
       - name: Run Insurance Integration Tests
         env:
-          ConnectionStrings__Default: "Server=localhost,1433;Database=InsuranceDb;User Id=sa;Password=${{ secrets.SA_PASSWORD }};TrustServerCertificate=True"
+          DB_SA_PASSWORD: ${{secrets.SA_PASSWORD}}
         run: dotnet test ./src/Insurance/Insurance.IntegrationTests/Insurance.IntegrationTests.csproj -c Release --no-build --collect:"XPlat Code Coverage"
 
       - name: Run Vehicle Integration Tests
         env:
-          ConnectionStrings__Default: "Server=localhost,1433;Database=VehicleDb;User Id=sa;Password=${{ secrets.SA_PASSWORD }};TrustServerCertificate=True"
+          DB_SA_PASSWORD: ${{secrets.SA_PASSWORD}}
         run: dotnet test ./src/Vehicle/Vehicle.IntegrationTests/Vehicle.IntegrationTests.csproj -c Release --no-build --collect:"XPlat Code Coverage"
 
       - name: Install ReportGenerator
