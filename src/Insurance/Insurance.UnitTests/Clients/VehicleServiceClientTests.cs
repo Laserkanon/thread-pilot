@@ -360,7 +360,7 @@ public class VehicleServiceClientTests
             {
                 c.BaseAddress = new Uri("http://localhost:5000");
             })
-            .AddPolicyHandler(HttpClientPolicies.GetSingleCallFallbackPolicy(mockLogger.Object))
+            .AddPolicyHandler(HttpClientPolicies.GetFallbackPolicy(mockLogger.Object))
             .AddPolicyHandler(HttpClientPolicies.GetCircuitBreakerPolicy(mockLogger.Object, 1))
             .ConfigurePrimaryHttpMessageHandler(() => _mockHttpMessageHandler.Object);
 
