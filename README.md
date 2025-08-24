@@ -79,7 +79,7 @@ The solution uses a simple feature toggle system to enable or disable certain fu
 
 -   **Configuration-based**: Toggles are defined in `appsettings.json` under the `FeatureToggles` section.
 -   **Service-based**: A dedicated `FeatureToggleService` abstracts the logic of reading toggle values. This service is injected into other services that need to check a feature's status.
--   **Static Toggles**: The current implementation uses `IConfiguration` to read the toggle values at application startup. This means that any changes to the toggles require an application restart to take effect.
+-   **Dynamic Toggles**: The implementation uses `IOptionsMonitor` to read the toggle values. This allows for dynamic, real-time reloading of feature toggles from `appsettings.json` without a restart.
 
 ---
 
@@ -322,7 +322,7 @@ This section outlines potential enhancements to the solution, categorized for cl
 -   **Native AOT Compilation**: Investigate compiling the services to **Native AOT** (Ahead-of-Time) to significantly reduce memory footprint and startup times, making the services more efficient and scalable, especially in containerized environments.
 -   **API Client Generation**: Automate the creation of the `VehicleServiceClient` by generating it directly from the `Vehicle.Service`'s OpenAPI/Swagger specification. This ensures the client is always in sync with the API contract.
 -   **Enhanced API Documentation**: Improve the existing Swagger documentation by adding detailed XML comments (`<summary>`, `<param>`, `<returns>`) to the API controllers and models. This would provide clearer, auto-generated guidance for API consumers.
--   **Dynamic Feature Toggles**: Refactor the feature toggle implementation to use `IOptionsMonitor` instead of `IConfiguration`. This would allow for dynamic reloading of feature toggles from `appsettings.json` without an application restart. For a more advanced setup, integrate a centralized feature toggle management service like LaunchDarkly or Azure App Configuration for real-time control over features in production.
+-   **Dynamic Feature Toggles**: For a more advanced setup, integrate a centralized feature toggle management service like LaunchDarkly or Azure App Configuration for real-time control over features in production.
 
 ### Security
 -   **Centralized Secret Management**: Refactor the solution to remove secrets (like database passwords) from `appsettings.json` and `docker-compose.yml` files. Instead, integrate a proper secret management tool like HashiCorp Vault or Azure Key Vault. This addresses the concern of having passwords committed to the repository and prepares the application for secure production deployments.
@@ -401,7 +401,6 @@ The following is a high-level, categorized list of the pending tasks documented 
 *   **Total Estimated Effort**: ~2-3 days
 *   **Tasks**:
     *   `[S]` **Task 02**: Add Metrics for Feature Toggles
-    *   `[S]` **Task 51**: Implement Dynamic Feature Toggles
     *   `[M]` **Task 18**: Add Distributed Tracing
     *   `[M]` **Task 50**: Implement the Bulkhead Resilience Pattern
 

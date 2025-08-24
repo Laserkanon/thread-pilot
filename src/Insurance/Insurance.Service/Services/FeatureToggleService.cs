@@ -1,22 +1,23 @@
+using Microsoft.Extensions.Options;
+
 namespace Insurance.Service.Services;
 
 public class FeatureToggleService : IFeatureToggleService
 {
-    private readonly IConfiguration _configuration;
+    private readonly IOptionsMonitor<FeatureToggleSettings> _optionsMonitor;
 
-    public FeatureToggleService(IConfiguration configuration)
+    public FeatureToggleService(IOptionsMonitor<FeatureToggleSettings> optionsMonitor)
     {
-        _configuration = configuration;
+        _optionsMonitor = optionsMonitor;
     }
 
     public bool IsVehicleEnrichmentEnabled()
     {
-        // Default to false if the setting is missing or invalid
-        return _configuration.GetValue<bool>(FeatureToggles.EnableVehicleEnrichment);
+        return _optionsMonitor.CurrentValue.EnableVehicleEnrichment;
     }
 
     public bool IsBatchVehicleCallEnabled()
     {
-        return _configuration.GetValue<bool>(FeatureToggles.EnableBatchVehicleCall);
+        return _optionsMonitor.CurrentValue.EnableBatchVehicleCall;
     }
 }

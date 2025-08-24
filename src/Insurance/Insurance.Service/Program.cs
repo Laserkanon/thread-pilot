@@ -21,6 +21,9 @@ builder.Services.AddScoped<IInsuranceService, InsuranceService>();
 builder.Services.AddScoped<IFeatureToggleService, FeatureToggleService>();
 builder.Services.AddScoped<IValidator<string>, PersonalIdentifyNumberValidator>();
 
+// Bind feature toggles to a strongly-typed class
+builder.Services.Configure<FeatureToggleSettings>(builder.Configuration.GetSection("FeatureToggles"));
+
 // Typed HttpClient for Vehicle Service
 builder.Services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>()
     .ConfigureHttpClientWithApiKey(VehicleHost.Name)
