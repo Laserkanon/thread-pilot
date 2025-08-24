@@ -35,6 +35,7 @@ Before running the application, you need to configure your local secrets. This p
     ```json
     {
       "Insurance.Service": {
+        "DB_USER": "sa",
         "DB_SA_PASSWORD": "YourStrongPassword!123",
         "Authentication": {
           "ApiKey": "d3a8b273-5a41-47c3-9a70-7981b1c3a6e8"
@@ -44,15 +45,18 @@ Before running the application, you need to configure your local secrets. This p
         }
       },
       "Vehicle.Service": {
+        "DB_USER": "sa",
         "DB_SA_PASSWORD": "YourStrongPassword!123",
         "Authentication": {
           "ApiKey": "d3a8b273-5a41-47c3-9a70-7981b1c3a6e8"
         }
       },
       "Insurance.Db": {
+        "DB_USER": "sa",
         "DB_SA_PASSWORD": "YourStrongPassword!123"
       },
       "Vehicle.Db": {
+        "DB_USER": "sa",
         "DB_SA_PASSWORD": "YourStrongPassword!123"
       }
     }
