@@ -9,7 +9,9 @@ public class VehicleServiceClient : IVehicleServiceClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<VehicleServiceClient> _logger;
-    private readonly int _maxDegreeOfParallelism;
+    private readonly int _maxDegreeOfParallelismSingle;
+    private readonly int _maxBatchSize;
+    private readonly int _maxDegreeOfParallelismBatch;
 
     public VehicleServiceClient(
         HttpClient httpClient,
@@ -18,7 +20,9 @@ public class VehicleServiceClient : IVehicleServiceClient
     {
         _httpClient = httpClient;
         _logger = logger;
-        _maxDegreeOfParallelism = configuration.GetValue("Vehicle.Service.Client:MaxDegreeOfParallelism", 5);
+        _maxDegreeOfParallelismSingle = configuration.GetValue("Vehicle.Service.Client:MaxDegreeOfParallelismSingle", 5);
+        _maxBatchSize = configuration.GetValue("Vehicle.Service.Client:MaxBatchSize", 50);
+        _maxDegreeOfParallelismBatch = configuration.GetValue("Vehicle.Service.Client:MaxDegreeOfParallelismBatch", 1);
     }
 
     public async Task<IEnumerable<Models.VehicleDetails>> GetVehiclesBatchAsync(string[] registrationNumbers)
@@ -28,20 +32,31 @@ public class VehicleServiceClient : IVehicleServiceClient
             return [];
         }
 
-        var response = await _httpClient.PostAsJsonAsync("/api/v1/vehicles/batch", registrationNumbers);
-        
-        if (!response.IsSuccessStatusCode)
+        var chunks = registrationNumbers.Chunk(_maxBatchSize);
+        var allVehicles = new System.Collections.Concurrent.ConcurrentBag<Models.VehicleDetails>();
+
+        await Parallel.ForEachAsync(chunks, new ParallelOptions { MaxDegreeOfParallelism = _maxDegreeOfParallelismBatch }, async (chunk, _) =>
         {
-            _logger.LogWarning("A non-successful status code {StatusCode} was received from the Vehicle Service. RegistrationNumbers: {RegistrationNumbers}", response.StatusCode, registrationNumbers);
-            return [];
-        }
+            var response = await _httpClient.PostAsJsonAsync("/api/v1/vehicles/batch", chunk);
 
-        var vehicles = await response.Content.ReadFromJsonAsync<Vehicle.Service.Contracts.Vehicle[]>();
-        
-        if(vehicles == null || vehicles.Length == 0)
-            return Array.Empty<Models.VehicleDetails>();
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("A non-successful status code {StatusCode} was received from the Vehicle Service. RegistrationNumbers: {RegistrationNumbers}", response.StatusCode, string.Join(", ", chunk));
+                return;
+            }
 
-        return vehicles.Select(x => x.MapToModels());
+            var vehicles = await response.Content.ReadFromJsonAsync<Vehicle.Service.Contracts.Vehicle[]>();
+
+            if (vehicles != null && vehicles.Length > 0)
+            {
+                foreach(var vehicle in vehicles)
+                {
+                    allVehicles.Add(vehicle.MapToModels());
+                }
+            }
+        });
+
+        return allVehicles;
     }
 
     public async Task<IEnumerable<Models.VehicleDetails>> GetVehiclesConcurrentlyAsync(string[] registrationNumbers)
@@ -49,7 +64,7 @@ public class VehicleServiceClient : IVehicleServiceClient
         var vehicleDetails = new System.Collections.Concurrent.ConcurrentBag<Models.VehicleDetails>();
 
         await Parallel.ForEachAsync(registrationNumbers,
-            new ParallelOptions { MaxDegreeOfParallelism = _maxDegreeOfParallelism },
+            new ParallelOptions { MaxDegreeOfParallelism = _maxDegreeOfParallelismSingle },
             async (regNumber, _) =>
             {
                 var vehicle = await GetVehicleAsync(regNumber);
