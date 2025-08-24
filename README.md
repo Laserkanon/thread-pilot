@@ -66,7 +66,7 @@ The solution uses dedicated `.Contracts` projects (e.g., `Insurance.Service.Cont
 
 The services use a straightforward and secure **API Key-based authentication** mechanism. This approach was chosen for its simplicity and effectiveness in server-to-server communication, which is the primary use case for this integration layer.
 
--   **How it Works**: Each service is configured with a secret API key. Clients (including other services within the solution) must include this key in the `X-Api-Key` header of their HTTP requests. A custom authentication handler (`ApiKeyAuthHandler`) validates the key. If the key is missing or invalid, the request is rejected with a `401 Unauthorized` response.
+-   **How it Works**: Each service is configured with a secret API key. Clients (including other services within the solution) must include this key in the `X-Api-Key` header of their HTTP requests. A custom authentication handler (`ApiKeyAuthHandler`) validates the key using a constant-time comparison algorithm to protect against timing attacks. If the key is missing or invalid, the request is rejected with a `401 Unauthorized` response.
 -   **Configuration**: The API key for each service is defined in `secrets.local.json` and applied via the `init.ps1` script, which stores them in .NET User Secrets. This ensures that keys are not hardcoded and are managed securely during local development. The `Vehicle.Service` client within the `Insurance.Service` is also configured with the correct key via dependency injection.
 -   **Security**: This strategy provides a solid layer of security for internal services, ensuring that only authorized clients can access the APIs. All endpoints across all services are protected by this scheme by default.
 
@@ -356,7 +356,6 @@ The following is a high-level, categorized list of the pending tasks documented 
 ### 7.1. Security (High Priority)
 *   **Total Estimated Effort**: ~1.5 days
 *   **Tasks**:
-    *   `[S]` **Task 30**: Harden API Key Authentication
     *   `[M]` **Task 40**: Implement API Quotas and Rate Limiting
     *   `[M]` **Task 46**: Integrate Azure Key Vault
     *   `[M]` **Task 53**: Integrate Secret Scanning
