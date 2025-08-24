@@ -1,9 +1,9 @@
 using FluentAssertions;
 using Infrastructure.FeatureToggle;
 using Insurance.Service.Clients;
+using Insurance.Service.FeatureToggles;
 using Insurance.Service.Repositories;
 using Insurance.Service.Services;
-using Insurance.Service.Settings;
 using Moq;
 using VehicleDetails = Insurance.Service.Models.VehicleDetails;
 

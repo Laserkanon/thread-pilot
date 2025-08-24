@@ -5,16 +5,12 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <PackageId>ThreadPilot.Insurance.Service.Contracts</PackageId>
-    <Version>1.3.0</Version>
+    <Version>1.4.0</Version>
     <Authors>Jules</Authors>
     <Company>ThreadPilot</Company>
     <Description>Contracts for the ThreadPilot Insurance Service API.</Description>
     <PackageTags>api contracts insurance threadpilot</PackageTags>
   </PropertyGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Vehicle\Vehicle.Service.Contracts\Vehicle.Service.Contracts.csproj" />
-  </ItemGroup>
 
 
 </Project>

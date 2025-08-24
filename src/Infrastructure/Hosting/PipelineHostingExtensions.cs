@@ -21,13 +21,15 @@ public static class PipelineHostingExtensions
             app.UseHttpsRedirection();
         }
 
-        app.MapPrometheusScrapingEndpoint();
-
+        app.UseRouting();
         app.UseAuthentication();
         app.UseAuthorization();
-
         app.MapControllers();
-        app.MapHealthChecks("/healthz").WithMetadata(new AllowAnonymousAttribute());
+
+        app.MapHealthChecks("/healthz")
+            .WithMetadata(new AllowAnonymousAttribute());
+           
+        app.MapPrometheusScrapingEndpoint();
 
         return app;
     }

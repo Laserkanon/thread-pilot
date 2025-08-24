@@ -1,8 +1,8 @@
 using Infrastructure.FeatureToggle;
 using Insurance.Service.Clients;
+using Insurance.Service.FeatureToggles;
 using Insurance.Service.Models;
 using Insurance.Service.Repositories;
-using Insurance.Service.Settings;
 
 namespace Insurance.Service.Services;
 

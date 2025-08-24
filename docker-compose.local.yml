@@ -24,7 +24,7 @@ services:
         condition: service_healthy
     environment:
       - DB_SA_PASSWORD=${DB_SA_PASSWORD}
-      - 'ConnectionStrings__Default=Server=sql-server,1433;Database=VehicleDb;User Id=sa;Password=;Encrypt=True;TrustServerCertificate=True;Connect Timeout=60'
+      - 'ConnectionStrings__Default=Server=sql-server,1433;Database=Vehicle;User Id=sa;Password=;Encrypt=True;TrustServerCertificate=True;Connect Timeout=60'
 
   # Insurance Database Migrator
   insurance-db-migrator:
@@ -36,7 +36,7 @@ services:
         condition: service_healthy
     environment:
       - DB_SA_PASSWORD=${DB_SA_PASSWORD}
-      - 'ConnectionStrings__Default=Server=sql-server,1433;Database=InsuranceDb;User Id=sa;Password=;Encrypt=True;TrustServerCertificate=True;Connect Timeout=60'
+      - 'ConnectionStrings__Default=Server=sql-server,1433;Database=Insurance;User Id=sa;Password=;Encrypt=True;TrustServerCertificate=True;Connect Timeout=60'
 
   # Vehicle Service
   vehicle-service:
@@ -48,7 +48,7 @@ services:
       - "5081:8080"
     environment:
       - DB_SA_PASSWORD=${DB_SA_PASSWORD}
-      - 'ConnectionStrings__Default=Server=sql-server,1433;Database=VehicleDb;User Id=sa;Password=;Encrypt=True;TrustServerCertificate=True;Connect Timeout=60'
+      - 'ConnectionStrings__Default=Server=sql-server,1433;Database=Vehicle;User Id=sa;Password=;Encrypt=True;TrustServerCertificate=True;Connect Timeout=60'
       - Authentication__ApiKey=${Authentication__ApiKey}
       - ASPNETCORE_URLS=http://0.0.0.0:8080
       - DISABLE_HTTPS_REDIRECTION=true
@@ -74,7 +74,7 @@ services:
         condition: service_healthy
     environment:
       - DB_SA_PASSWORD=${DB_SA_PASSWORD}
-      - 'ConnectionStrings__Default=Server=sql-server,1433;Database=InsuranceDb;User Id=sa;Password=;Encrypt=True;TrustServerCertificate=True;Connect Timeout=60'
+      - 'ConnectionStrings__Default=Server=sql-server,1433;Database=Insurance;User Id=sa;Password=;Encrypt=True;TrustServerCertificate=True;Connect Timeout=60'
       - ASPNETCORE_URLS=http://0.0.0.0:8080
       - DISABLE_HTTPS_REDIRECTION=true
       - Vehicle.Service.Client__ApiKey=${Vehicle__Service__Client__ApiKey}

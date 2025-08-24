@@ -18,38 +18,13 @@ public static class MapperExtensions
         };
     }
     
-    public static Models.Insurance MapToModels(this Contracts.Insurance insurance)
-    {
-        return new Models.Insurance
-        {
-            InsuranceId = insurance.InsuranceId,
-            PersonalIdentityNumber = insurance.PersonalIdentityNumber,
-            Product = (Models.ProductType)insurance.Product,
-            MonthlyCost = insurance.MonthlyCost,
-            CarRegistrationNumber = insurance.CarRegistrationNumber,
-            VehicleDetails = insurance.VehicleDetails?.MapToModels()
-        };
-    }
-
     private static VehicleDetails MapToContracts(this Models.VehicleDetails vehicleDetails)
     {
         return new VehicleDetails
         {
             Make = vehicleDetails.Make,
             Model = vehicleDetails.Model,
-            ModelYear = vehicleDetails.ModelYear,
-            RegistrationNumber = vehicleDetails.RegistrationNumber,
-        };
-    }
-    
-    private static Models.VehicleDetails MapToModels(this VehicleDetails vehicleDetails)
-    {
-        return new Models.VehicleDetails
-        {
-            Make = vehicleDetails.Make,
-            Model = vehicleDetails.Model,
-            ModelYear = vehicleDetails.ModelYear,
-            RegistrationNumber = vehicleDetails.RegistrationNumber,
+            ModelYear = vehicleDetails.ModelYear
         };
     }
 

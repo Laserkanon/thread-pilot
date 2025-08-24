@@ -1,6 +1,8 @@
 ﻿using System.Security.Claims;
 using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -25,6 +27,12 @@ public class ApiKeyAuthHandler : AuthenticationHandler<AuthenticationSchemeOptio
 
     protected override Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        var endpoint = Context.GetEndpoint();
+        if (endpoint?.Metadata.GetMetadata<IAllowAnonymous>() != null)
+        {
+            return Task.FromResult(AuthenticateResult.NoResult());
+        }
+        
         if (!Request.Headers.TryGetValue(ApiKeyHeader, out var extractedApiKey))
         {
             return Task.FromResult(AuthenticateResult.Fail("API Key header not found."));
