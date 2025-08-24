@@ -32,7 +32,7 @@ public class ApiKeyAuthHandler : AuthenticationHandler<AuthenticationSchemeOptio
 
         var apiKey = _configuration.GetValue<string>("Authentication:ApiKey");
 
-        if (apiKey == null || !apiKey.Equals(extractedApiKey.ToString()))
+        if (apiKey == null || !ConstantTimeEquals(apiKey, extractedApiKey.ToString()))
         {
             return Task.FromResult(AuthenticateResult.Fail("Invalid API Key."));
         }
@@ -43,5 +43,21 @@ public class ApiKeyAuthHandler : AuthenticationHandler<AuthenticationSchemeOptio
         var ticket = new AuthenticationTicket(principal, Scheme.Name);
 
         return Task.FromResult(AuthenticateResult.Success(ticket));
+    }
+
+    private static bool ConstantTimeEquals(string a, string b)
+    {
+        if (a.Length != b.Length)
+        {
+            return false;
+        }
+
+        int result = 0;
+        for (int i = 0; i < a.Length; i++)
+        {
+            result |= a[i] ^ b[i];
+        }
+
+        return result == 0;
     }
 }
