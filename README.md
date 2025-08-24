@@ -260,7 +260,7 @@ The solution includes both unit and integration tests to ensure correctness and 
 
 The solution includes basic observability features out of the box.
 
--   **Health Checks**: Both services expose a standard health check endpoint at `/healthz`. This can be used by container orchestration systems like Kubernetes or service meshes to automatically manage application health.
+-   **Health Checks**: Both services expose a standard health check endpoint at `/healthz`. This endpoint is intentionally left unauthenticated to allow seamless integration with automated health monitoring systems like Kubernetes or load balancers, which typically do not use authentication headers for their probes.
 -   **Application Metrics**: Both services use **OpenTelemetry** to expose a wide range of application metrics in a **Prometheus**-compatible format. This includes standard metrics for HTTP requests (e.g., duration, count, status codes) and HttpClient calls. The metrics are available on the `/metrics` endpoint of each service and can be scraped by a Prometheus server for monitoring and alerting.
 -   **Structured Logging**: The services are configured to use **Serilog** for structured logging. Logs are written to the console in a machine-readable JSON format, which makes them easy to collect, parse, and analyze in a centralized logging platform.
 
