@@ -75,11 +75,12 @@ This pragmatic approach was chosen for its simplicity. It is currently unclear w
 
 ### 1.8. Feature Toggles
 
-The solution uses a simple feature toggle system to enable or disable certain functionality at runtime without requiring a redeployment. The implementation is based on the following principles:
+The solution uses a generic and reusable feature toggle system to enable or disable certain functionality at runtime without requiring a redeployment. The implementation is based on the following principles:
 
--   **Configuration-based**: Toggles are defined in `appsettings.json` under the `FeatureToggles` section.
--   **Service-based**: A dedicated `FeatureToggleService` abstracts the logic of reading toggle values. This service is injected into other services that need to check a feature's status.
--   **Dynamic Toggles**: The implementation uses `IOptionsMonitor` to read the toggle values. This allows for dynamic, real-time reloading of feature toggles from `appsettings.json` without a restart.
+-   **Generic Service**: A generic `IFeatureToggleService<T>` is provided in the `Infrastructure` project, where `T` is a class that defines the feature toggle properties for a specific consumer.
+-   **Configuration-based**: Each consumer defines its own settings class (e.g., `InsuranceFeatureToggles`) which is bound to the fixed `FeatureToggles` configuration section in `appsettings.json`.
+-   **Easy Setup**: A generic hosting extension, `AddFeatureToggles<T>()`, makes it easy to register the feature toggles for a service. It automatically binds to the `FeatureToggles` section in the configuration.
+-   **Dynamic Reloading**: The implementation uses `IOptionsMonitor<T>` to read the toggle values, which allows for dynamic, real-time reloading of feature toggles from `appsettings.json` without an application restart.
 
 ---
 

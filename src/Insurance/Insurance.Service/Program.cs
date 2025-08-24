@@ -6,6 +6,7 @@ using Insurance.Service.Repositories;
 using Insurance.Service.Services;
 using Insurance.Service.Validators;
 using Insurance.Service.Policies;
+using Insurance.Service.Settings;
 using VehicleHost = Vehicle.Service.Contracts.Host;
 using ILogger = Serilog.ILogger;
 
@@ -18,11 +19,8 @@ var builder = WebApplication.CreateBuilder(args)
 // Domain services
 builder.Services.AddScoped<IInsuranceRepository, InsuranceRepository>();
 builder.Services.AddScoped<IInsuranceService, InsuranceService>();
-builder.Services.AddScoped<IFeatureToggleService, FeatureToggleService>();
+builder.Services.AddFeatureToggles<InsuranceFeatureToggles>(builder.Configuration);
 builder.Services.AddScoped<IValidator<string>, PersonalIdentifyNumberValidator>();
-
-// Bind feature toggles to a strongly-typed class
-builder.Services.Configure<FeatureToggleSettings>(builder.Configuration.GetSection("FeatureToggles"));
 
 // Typed HttpClient for Vehicle Service
 builder.Services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>()

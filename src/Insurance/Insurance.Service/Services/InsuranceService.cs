@@ -1,6 +1,8 @@
+using Infrastructure.Services;
 using Insurance.Service.Clients;
 using Insurance.Service.Models;
 using Insurance.Service.Repositories;
+using Insurance.Service.Settings;
 
 namespace Insurance.Service.Services;
 
@@ -8,12 +10,12 @@ public class InsuranceService : IInsuranceService
 {
     private readonly IInsuranceRepository _insuranceRepository;
     private readonly IVehicleServiceClient _vehicleServiceClient;
-    private readonly IFeatureToggleService _featureToggleService;
+    private readonly IFeatureToggleService<InsuranceFeatureToggles> _featureToggleService;
 
     public InsuranceService(
         IInsuranceRepository insuranceRepository,
         IVehicleServiceClient vehicleServiceClient,
-        IFeatureToggleService featureToggleService)
+        IFeatureToggleService<InsuranceFeatureToggles> featureToggleService)
     {
         _insuranceRepository = insuranceRepository;
         _vehicleServiceClient = vehicleServiceClient;
@@ -29,7 +31,7 @@ public class InsuranceService : IInsuranceService
             return [];
         }
 
-        if (_featureToggleService.IsVehicleEnrichmentEnabled())
+        if (_featureToggleService.Toggles.EnableVehicleEnrichment)
         {
             await EnrichInsurancesWithVehicleDetailsAsync(insuranceEntities);
         }
@@ -53,7 +55,7 @@ public class InsuranceService : IInsuranceService
             .Distinct() //No need to fetch duplicates
             .ToArray();
 
-        var vehicleDetails = _featureToggleService.IsBatchVehicleCallEnabled()
+        var vehicleDetails = _featureToggleService.Toggles.EnableBatchVehicleCall
             ? await _vehicleServiceClient.GetVehiclesBatchAsync(registrationNumbers)
             : await _vehicleServiceClient.GetVehiclesConcurrentlyAsync(registrationNumbers);
         

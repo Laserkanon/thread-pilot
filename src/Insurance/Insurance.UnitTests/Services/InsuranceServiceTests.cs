@@ -1,7 +1,9 @@
 using FluentAssertions;
+using Infrastructure.Services;
 using Insurance.Service.Clients;
 using Insurance.Service.Repositories;
 using Insurance.Service.Services;
+using Insurance.Service.Settings;
 using Moq;
 using VehicleDetails = Insurance.Service.Models.VehicleDetails;
 
@@ -11,18 +13,17 @@ public class InsuranceServiceTests
 {
     private readonly Mock<IInsuranceRepository> _mockInsuranceRepository;
     private readonly Mock<IVehicleServiceClient> _mockVehicleServiceClient;
-    private readonly Mock<IFeatureToggleService> _mockFeatureToggleService;
+    private readonly Mock<IFeatureToggleService<InsuranceFeatureToggles>> _mockFeatureToggleService;
     private readonly InsuranceService _insuranceService;
 
     public InsuranceServiceTests()
     {
         _mockInsuranceRepository = new Mock<IInsuranceRepository>();
         _mockVehicleServiceClient = new Mock<IVehicleServiceClient>();
-        _mockFeatureToggleService = new Mock<IFeatureToggleService>();
+        _mockFeatureToggleService = new Mock<IFeatureToggleService<InsuranceFeatureToggles>>();
 
         // Always enable the feature toggles for these tests unless specified otherwise
-        _mockFeatureToggleService.Setup(f => f.IsVehicleEnrichmentEnabled()).Returns(true);
-        _mockFeatureToggleService.Setup(f => f.IsBatchVehicleCallEnabled()).Returns(true);
+        _mockFeatureToggleService.Setup(f => f.Toggles).Returns(new InsuranceFeatureToggles { EnableVehicleEnrichment = true, EnableBatchVehicleCall = true });
 
         _insuranceService = new InsuranceService(
             _mockInsuranceRepository.Object,
@@ -135,7 +136,7 @@ public class InsuranceServiceTests
             new() { Product = Service.Models.ProductType.Car, PersonalIdentityNumber = pin, CarRegistrationNumber = "ABC123" }
         };
         _mockInsuranceRepository.Setup(r => r.GetInsurancesByPinAsync(pin)).ReturnsAsync(insuranceEntities);
-        _mockFeatureToggleService.Setup(f => f.IsVehicleEnrichmentEnabled()).Returns(false);
+        _mockFeatureToggleService.Setup(f => f.Toggles).Returns(new InsuranceFeatureToggles { EnableVehicleEnrichment = false });
 
         // Act
         var result = (await _insuranceService.GetInsurancesForPinAsync(pin)).ToList();
@@ -217,7 +218,7 @@ public class InsuranceServiceTests
             new() { InsuranceId = 1, PersonalIdentityNumber = pin, Product = Service.Models.ProductType.Car, CarRegistrationNumber = "CAR1" }
         };
         _mockInsuranceRepository.Setup(r => r.GetInsurancesByPinAsync(pin)).ReturnsAsync(insuranceEntities);
-        _mockFeatureToggleService.Setup(f => f.IsBatchVehicleCallEnabled()).Returns(true);
+        _mockFeatureToggleService.Setup(f => f.Toggles).Returns(new InsuranceFeatureToggles { EnableVehicleEnrichment = true, EnableBatchVehicleCall = true });
 
         // Act
         await _insuranceService.GetInsurancesForPinAsync(pin);
@@ -237,7 +238,7 @@ public class InsuranceServiceTests
             new() { InsuranceId = 1, PersonalIdentityNumber = pin, Product = Service.Models.ProductType.Car, CarRegistrationNumber = "CAR1" }
         };
         _mockInsuranceRepository.Setup(r => r.GetInsurancesByPinAsync(pin)).ReturnsAsync(insuranceEntities);
-        _mockFeatureToggleService.Setup(f => f.IsBatchVehicleCallEnabled()).Returns(false);
+        _mockFeatureToggleService.Setup(f => f.Toggles).Returns(new InsuranceFeatureToggles { EnableVehicleEnrichment = true, EnableBatchVehicleCall = false });
 
         // Act
         await _insuranceService.GetInsurancesForPinAsync(pin);
