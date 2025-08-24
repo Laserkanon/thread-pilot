@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
@@ -27,7 +28,7 @@ public static class PipelineHostingExtensions
         app.UseAuthorization();
 
         app.MapControllers();
-        app.MapHealthChecks("/healthz");
+        app.MapHealthChecks("/healthz").WithMetadata(new AllowAnonymousAttribute());
 
         return app;
     }
