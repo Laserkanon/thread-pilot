@@ -2,7 +2,7 @@
 
 namespace Infrastructure.Hosting
 {
-    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method, AllowMultiple = false, Inherited = true)]
+    [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
     public class AllowAnonymousAttribute : Attribute, IAllowAnonymous
     {
     }

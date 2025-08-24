@@ -63,7 +63,7 @@ namespace Vehicle.UnitTests.Controllers
 
             // Assert
             var okResult = Assert.IsType<OkObjectResult>(result);
-            var returnedVehicles = Assert.IsAssignableFrom<IEnumerable<Vehicle.Service.Contracts.Vehicle>>(okResult.Value);
+            var returnedVehicles = Assert.IsType<IEnumerable<Vehicle.Service.Contracts.Vehicle>>(okResult.Value, exactMatch: false);
             Assert.Empty(returnedVehicles);
         }
 

@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using OpenTelemetry.Metrics;
 
 namespace Insurance.IntegrationTests.Infrastructure;
 

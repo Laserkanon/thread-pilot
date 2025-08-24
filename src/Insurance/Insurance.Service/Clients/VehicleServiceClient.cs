@@ -30,9 +30,9 @@ public class VehicleServiceClient : IVehicleServiceClient
         var chunks = registrationNumbers.Chunk(_configuration.MaxBatchSize);
         var allVehicles = new System.Collections.Concurrent.ConcurrentBag<Models.VehicleDetails>();
 
-        await Parallel.ForEachAsync(chunks, new ParallelOptions { MaxDegreeOfParallelism = _configuration.MaxDegreeOfParallelismBatch }, async (chunk, _) =>
+        await Parallel.ForEachAsync(chunks, new ParallelOptions { MaxDegreeOfParallelism = _configuration.MaxDegreeOfParallelismBatch }, async (chunk, cancellationToken) =>
         {
-            var response = await _httpClient.PostAsJsonAsync("/api/v1/vehicles/batch", chunk);
+            var response = await _httpClient.PostAsJsonAsync("/api/v1/vehicles/batch", chunk, cancellationToken: cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -40,9 +40,9 @@ public class VehicleServiceClient : IVehicleServiceClient
                 return;
             }
 
-            var vehicles = await response.Content.ReadFromJsonAsync<Vehicle.Service.Contracts.Vehicle[]>();
+            var vehicles = await response.Content.ReadFromJsonAsync<Vehicle.Service.Contracts.Vehicle[]>(cancellationToken: cancellationToken);
 
-            if (vehicles != null && vehicles.Length > 0)
+            if (vehicles is { Length: > 0 })
             {
                 foreach(var vehicle in vehicles)
                 {
