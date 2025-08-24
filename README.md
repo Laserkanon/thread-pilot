@@ -355,7 +355,7 @@ The following is a high-level, categorized list of the pending tasks documented 
 *   **L (Large)**: ~4-8 hours
 *   **XL (Extra Large)**: > 8 hours
 
-### 7.1. Security (High Priority)
+### 7.1. Security
 *   **Total Estimated Effort**: ~1.5 days
 *   **Tasks**:
     *   `[M]` **Task 40**: Implement API Quotas and Rate Limiting
@@ -399,11 +399,12 @@ The following is a high-level, categorized list of the pending tasks documented 
     *   `[XL]` **Task 45**: Dynamically Generate Docker Compose File
 
 ### 7.5. New Features & Observability
-*   **Total Estimated Effort**: ~2-3 days
+*   **Total Estimated Effort**: ~3-4 days
 *   **Tasks**:
     *   `[S]` **Task 02**: Add Metrics for Feature Toggles
     *   `[M]` **Task 18**: Add Distributed Tracing
-    *   `[M]` **Task 50**: Implement the Bulkhead Resilience Pattern
+    *   `[M]` **Task 50**: Implement improved Bulkhead Resilience Pattern
+    *   `[L]` **Task 55**: Integrate Centralized Feature Toggle Management
 
 ### 7.6. Documentation
 *   **Total Estimated Effort**: ~0.5 day
