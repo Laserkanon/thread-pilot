@@ -27,7 +27,7 @@ Before running the application, you need to configure your local secrets. This p
 
 1.  **Create the secrets file**: In the project's root directory, make a copy of `secrets.local.json.template` and rename it to **`secrets.local.json`**.
     ```bash
-cp secrets.local.json.template secrets.local.json
+    cp secrets.local.json.template secrets.local.json
     ```
 
 2.  **Edit the secrets file**: Open **`secrets.local.json`** and change your secret values.
