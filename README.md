@@ -34,15 +34,26 @@ EnableBatchVehicleCall: This allows an operator to switch between the two strate
 
 ### 1.3. Dependency Injection (DI)
 
-The project uses the standard, built-in .NET dependency injection container. The setup is clean, straightforward, and configured directly in `Program.cs`, following modern .NET best practices. There are no custom or "old-fashioned" DI frameworks or installers.
+The project uses the standard, built-in .NET dependency injection container. The setup is clean, straightforward, and configured directly in `Program.cs`, following modern .NET best practices.
+
+The majority of application and data access services are registered with a **Scoped** lifetime. This is a deliberate and standard practice for web applications for several key reasons:
+-   **Safety**: A new instance of the service is created for each HTTP request. This is the safest way to handle dependencies that use resources like database connections, as it prevents data from one user's request from ever leaking into another's.
+-   **Efficiency**: Within the same HTTP request, the same instance of a service is shared. If multiple components need the same service during a single operation, they all receive the same instance, avoiding the overhead of creating new objects unnecessarily.
+-   **Correctness**: It ensures that a single, consistent "unit of work" is used for the duration of a request. For example, all repository interactions during one API call can share the same database transaction context.
+
+Other lifetimes are used where appropriate. For example, the **typed `HttpClient` pattern** is used for communication between services. When using `services.AddHttpClient<T>()`, the typed client itself is registered as **transient**, but it uses an `HttpClient` managed by the `IHttpClientFactory`. This factory is crucial for two reasons:
+-   **Connection Management**: It pools and reuses the underlying network connections (`HttpMessageHandler`s), which prevents socket exhaustion and improves performance.
+-   **Policy Integration**: It seamlessly integrates with resilience policies (like Retry and Circuit Breaker from Polly). The factory ensures that the configured policies are correctly applied to every request made by the `HttpClient`.
+
+This combination provides a robust, efficient, and resilient way to make HTTP requests.
 
 *Example from `Insurance.Service/Program.cs`:*
 ```csharp
-// Domain services
+// Domain services are registered with a Scoped lifetime
 builder.Services.AddScoped<IInsuranceRepository, InsuranceRepository>();
 builder.Services.AddScoped<IInsuranceService, InsuranceService>();
 
-// HTTP Client for Vehicle Service
+// Typed HttpClient for Vehicle Service (managed by the factory)
 builder.Services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>();
 ```
 
