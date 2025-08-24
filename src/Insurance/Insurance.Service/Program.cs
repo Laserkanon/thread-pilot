@@ -5,6 +5,7 @@ using Insurance.Service.Clients;
 using Insurance.Service.Repositories;
 using Insurance.Service.Services;
 using Insurance.Service.Validators;
+using Insurance.Service.Contracts;
 using Insurance.Service.Policies;
 using Insurance.Service.Settings;
 using VehicleHost = Vehicle.Service.Contracts.Host;
@@ -22,9 +23,13 @@ builder.Services.AddScoped<IInsuranceService, InsuranceService>();
 builder.Services.AddFeatureToggles<InsuranceFeatureToggles>(builder.Configuration);
 builder.Services.AddScoped<IValidator<string>, PersonalIdentifyNumberValidator>();
 
+var vehicleServiceSettings = new VehicleServiceClientConfiguration();
+builder.Configuration.GetSection("Vehicle.Service.Client").Bind(vehicleServiceSettings);
+builder.Services.AddSingleton(vehicleServiceSettings);
+
 // Typed HttpClient for Vehicle Service
 builder.Services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>()
-    .ConfigureHttpClientWithApiKey(VehicleHost.Name)
+    .ConfigureHttpClientWithApiKey<VehicleServiceClientConfiguration>()
     .AddPolicyHandler((sp, _) => HttpClientPolicies.GetFallbackPolicy(sp.GetRequiredService<ILogger>()))
     .AddPolicyHandler((sp, _) => HttpClientPolicies.GetRetryPolicy(sp.GetRequiredService<ILogger>()))
     .AddPolicyHandler((sp, _) => HttpClientPolicies.GetCircuitBreakerPolicy(sp.GetRequiredService<ILogger>()));

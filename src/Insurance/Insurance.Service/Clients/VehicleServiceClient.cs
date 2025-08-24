@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json;
+using Insurance.Service.Contracts;
 using Insurance.Service.Extensions;
 using Insurance.Service.Services;
 
@@ -16,13 +17,13 @@ public class VehicleServiceClient : IVehicleServiceClient
     public VehicleServiceClient(
         HttpClient httpClient,
         ILogger<VehicleServiceClient> logger,
-        IConfiguration configuration)
+        VehicleServiceClientConfiguration vehicleServiceClientConfiguration)
     {
         _httpClient = httpClient;
         _logger = logger;
-        _maxDegreeOfParallelismSingle = configuration.GetValue("Vehicle.Service.Client:MaxDegreeOfParallelismSingle", 5);
-        _maxBatchSize = configuration.GetValue("Vehicle.Service.Client:MaxBatchSize", 50);
-        _maxDegreeOfParallelismBatch = configuration.GetValue("Vehicle.Service.Client:MaxDegreeOfParallelismBatch", 1);
+        _maxDegreeOfParallelismSingle = vehicleServiceClientConfiguration.MaxDegreeOfParallelismSingle;
+        _maxBatchSize = vehicleServiceClientConfiguration.MaxBatchSize;
+        _maxDegreeOfParallelismBatch = vehicleServiceClientConfiguration.MaxDegreeOfParallelismBatch;
     }
 
     public async Task<IEnumerable<Models.VehicleDetails>> GetVehiclesBatchAsync(string[] registrationNumbers)

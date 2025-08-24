@@ -3,10 +3,10 @@ using System.Net.Http;
 using System.Text.Json;
 using FluentAssertions;
 using Insurance.Service.Clients;
+using Insurance.Service.Contracts;
 using Insurance.Service.Policies;
 using Microsoft.Extensions.DependencyInjection;
 using Insurance.Service.Services;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Moq.Protected;
@@ -19,23 +19,20 @@ public class VehicleServiceClientTests
 {
     private readonly Mock<HttpMessageHandler> _mockHttpMessageHandler;
     private readonly IVehicleServiceClient _client;
-    private readonly IConfiguration _configuration;
 
     public VehicleServiceClientTests()
     {
         _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
-        var inMemorySettings = new Dictionary<string, string?> {
-            {"Vehicle.Service.Client:MaxDegreeOfParallelismSingle", "5"},
-            {"Vehicle.Service.Client:MaxBatchSize", "2"},
-            {"Vehicle.Service.Client:MaxDegreeOfParallelismBatch", "1"},
+
+        var vehicleServiceClientConfiguration = new VehicleServiceClientConfiguration
+        {
+            MaxDegreeOfParallelismSingle = 5,
+            MaxBatchSize = 2,
+            MaxDegreeOfParallelismBatch = 1
         };
 
-        _configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(inMemorySettings)
-            .Build();
-
         var services = new ServiceCollection();
-        services.AddSingleton<IConfiguration>(_configuration);
+        services.AddSingleton(vehicleServiceClientConfiguration);
         services.AddSingleton<Microsoft.Extensions.Logging.ILogger<VehicleServiceClient>>(NullLogger<VehicleServiceClient>.Instance);
 
         services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>(c =>
@@ -193,7 +190,7 @@ public class VehicleServiceClientTests
             .ReturnsAsync(successResponseMessage);
 
         var services = new ServiceCollection();
-        services.AddSingleton<IConfiguration>(_configuration);
+        services.AddSingleton(new VehicleServiceClientConfiguration { MaxDegreeOfParallelismSingle = 5, MaxBatchSize = 2, MaxDegreeOfParallelismBatch = 1 });
         services.AddSingleton<Microsoft.Extensions.Logging.ILogger<VehicleServiceClient>>(NullLogger<VehicleServiceClient>.Instance);
         services.AddSingleton(mockLogger.Object);
 
@@ -246,7 +243,7 @@ public class VehicleServiceClientTests
             .ReturnsAsync(successResponseMessage);
 
         var services = new ServiceCollection();
-        services.AddSingleton<IConfiguration>(_configuration);
+        services.AddSingleton(new VehicleServiceClientConfiguration { MaxDegreeOfParallelismSingle = 5, MaxBatchSize = 2, MaxDegreeOfParallelismBatch = 1 });
         services.AddSingleton<Microsoft.Extensions.Logging.ILogger<VehicleServiceClient>>(NullLogger<VehicleServiceClient>.Instance);
         services.AddSingleton(mockLogger.Object);
 
@@ -292,7 +289,7 @@ public class VehicleServiceClientTests
             .ReturnsAsync(errorResponseMessage);
 
         var services = new ServiceCollection();
-        services.AddSingleton<IConfiguration>(_configuration);
+        services.AddSingleton(new VehicleServiceClientConfiguration { MaxDegreeOfParallelismSingle = 5, MaxBatchSize = 2, MaxDegreeOfParallelismBatch = 1 });
         services.AddSingleton<Microsoft.Extensions.Logging.ILogger<VehicleServiceClient>>(NullLogger<VehicleServiceClient>.Instance);
         services.AddSingleton(mockLogger.Object);
 
@@ -336,7 +333,7 @@ public class VehicleServiceClientTests
             .ReturnsAsync(errorResponseMessage);
 
         var services = new ServiceCollection();
-        services.AddSingleton<IConfiguration>(_configuration);
+        services.AddSingleton(new VehicleServiceClientConfiguration { MaxDegreeOfParallelismSingle = 5, MaxBatchSize = 2, MaxDegreeOfParallelismBatch = 1 });
         services.AddSingleton<Microsoft.Extensions.Logging.ILogger<VehicleServiceClient>>(NullLogger<VehicleServiceClient>.Instance);
         services.AddSingleton(mockLogger.Object);
 
