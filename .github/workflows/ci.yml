@@ -12,9 +12,10 @@ jobs:
         env:
           ACCEPT_EULA: Y
           SA_PASSWORD: "${{ secrets.SA_PASSWORD }}"
+          DB_USER: ${{ secrets.DB_USER }}
         ports: ["1433:1433"]
         options: >-
-          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P $SA_PASSWORD -C -Q 'SELECT 1'"
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U ${{ secrets.DB_USER }} -P $SA_PASSWORD -C -Q 'SELECT 1'"
           --health-interval 10s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
@@ -29,11 +30,13 @@ jobs:
         working-directory: ./src/Vehicle/Vehicle.Db
         env:
           DB_SA_PASSWORD: ${{secrets.SA_PASSWORD}}
+          DB_USER: ${{ secrets.DB_USER }}
         run: dotnet run --configuration Release
 
       - name: Apply Insurance DB Migrations
         env:
           DB_SA_PASSWORD: ${{secrets.SA_PASSWORD}}
+          DB_USER: ${{ secrets.DB_USER }}
         working-directory: ./src/Insurance/Insurance.Db
         run: dotnet run --configuration Release
 
@@ -45,11 +48,13 @@ jobs:
       - name: Run Insurance Integration Tests
         env:
           DB_SA_PASSWORD: ${{secrets.SA_PASSWORD}}
+          DB_USER: ${{ secrets.DB_USER }}
         run: dotnet test ./src/Insurance/Insurance.IntegrationTests/Insurance.IntegrationTests.csproj -c Release --no-build --collect:"XPlat Code Coverage"
 
       - name: Run Vehicle Integration Tests
         env:
           DB_SA_PASSWORD: ${{secrets.SA_PASSWORD}}
+          DB_USER: ${{ secrets.DB_USER }}
         run: dotnet test ./src/Vehicle/Vehicle.IntegrationTests/Vehicle.IntegrationTests.csproj -c Release --no-build --collect:"XPlat Code Coverage"
 
       - name: Install ReportGenerator
