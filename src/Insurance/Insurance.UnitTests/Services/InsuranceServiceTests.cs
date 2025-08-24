@@ -1,5 +1,5 @@
 using FluentAssertions;
-using Infrastructure.Services;
+using Infrastructure.FeatureToggle;
 using Insurance.Service.Clients;
 using Insurance.Service.Repositories;
 using Insurance.Service.Services;

@@ -1,0 +1,5 @@
+-   **Title**: Centralize Configuration
+-   **Description**: The goal of this task is to centralize configuration values that are currently spread out in the C# code. This will be achieved by creating a configuration class and injecting it into the classes that need it, rather than passing along `IConfiguration`. This change will improve maintainability and make it easier to manage configuration values.
+-   **Status**: Done
+-   **Author**: Jules
+-   **Date**: 2025-08-24

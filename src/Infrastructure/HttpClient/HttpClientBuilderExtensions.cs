@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.HttpClient;
 
@@ -9,29 +8,18 @@ public static class HttpClientBuilderExtensions
     /// Configures an HttpClient with a base address and an API key from a specified configuration section.
     /// </summary>
     /// <param name="builder">The IHttpClientBuilder to configure.</param>
-    /// <param name="targetHostName">The path to the configuration section in appsettings.json.</param>
     /// <returns>The IHttpClientBuilder for chaining.</returns>
-    public static IHttpClientBuilder ConfigureHttpClientWithApiKey(
-        this IHttpClientBuilder builder, 
-        string targetHostName)
+    public static IHttpClientBuilder ConfigureHttpClientWithApiKey<T>(
+        this IHttpClientBuilder builder) where T : class, IHttpClientBaseConfiguration
     {
         builder.ConfigureHttpClient((serviceProvider, client) =>
         {
-            var clientConfigurationSection = GetClientConfigurationSectionPath(targetHostName);
-            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
-            var serviceConfig = configuration.GetSection(clientConfigurationSection);
+            var clientConfiguration = serviceProvider.GetRequiredService<T>();
             
-            if (!serviceConfig.Exists())
-            {
-                throw new InvalidOperationException($"Configuration section '{clientConfigurationSection}' not found.");
-            }
-            
-            client.BaseAddress = new Uri(serviceConfig["BaseUrl"] ?? string.Empty);
-            client.DefaultRequestHeaders.Add("x-api-key", serviceConfig["ApiKey"]);
+            client.BaseAddress = new Uri(clientConfiguration.BaseUrl);
+            client.DefaultRequestHeaders.Add("x-api-key", clientConfiguration.ApiKey);
         });
 
         return builder;
     }
-
-    private static string GetClientConfigurationSectionPath(string serviceHost) => $"{serviceHost}.Client";
 }

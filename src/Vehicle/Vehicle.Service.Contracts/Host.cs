@@ -2,5 +2,5 @@
 
 public static class Host
 {
-    public const string Name = "Vehicle.Service";
+    public const string ClientName = "Vehicle.Service.Client";
 }

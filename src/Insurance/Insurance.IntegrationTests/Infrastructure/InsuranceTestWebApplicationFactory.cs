@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
-using OpenTelemetry.Metrics;
 
 namespace Insurance.IntegrationTests.Infrastructure;
 
@@ -35,8 +34,6 @@ public class InsuranceTestWebApplicationFactory : WebApplicationFactory<Program>
 
                 //Mock external service
                 services.AddScoped<IVehicleServiceClient>(_ => MockVehicleClient.Object);
-
-                services.AddOpenTelemetry().WithMetrics(builder => builder.AddPrometheusExporter());
             });
     }
 }

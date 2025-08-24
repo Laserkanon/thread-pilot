@@ -1,7 +1,6 @@
 using System.Reflection;
 using Microsoft.AspNetCore.Authorization;
 using Vehicle.Service.Controllers;
-using Xunit;
 
 namespace Vehicle.UnitTests.Security;
 

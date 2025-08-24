@@ -1,7 +1,6 @@
 using System.Reflection;
 using Insurance.Service.Controllers;
 using Microsoft.AspNetCore.Authorization;
-using Xunit;
 
 namespace Insurance.UnitTests.Security;
 
