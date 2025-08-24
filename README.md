@@ -85,7 +85,7 @@ The solution uses dedicated `.Contracts` projects (e.g., `Insurance.Service.Cont
 
 ### 1.7. Authentication and Authorization
 
-The services use a straightforward and secure **API Key-based authentication** mechanism. This approach was chosen for its simplicity and effectiveness in server-to-server communication, which is the primary use case for this integration layer.
+The services currently use a simple API Key-based authentication mechanism. This choice was made because the overall architecture and usage patterns of these services are not yet fully defined. Implementing API Key authentication provides a cost-effective and minimal first step to secure the endpoints, while keeping flexibility for more advanced authentication and authorization approaches as the system evolves.
 
 -   **How it Works**: Each service is configured with a secret API key. Clients (including other services within the solution) must include this key in the `X-Api-Key` header of their HTTP requests. A custom authentication handler (`ApiKeyAuthHandler`) validates the key using a constant-time comparison algorithm to protect against timing attacks. If the key is missing or invalid, the request is rejected with a `401 Unauthorized` response.
 -   **Configuration**: The API key for each service is defined in `secrets.local.json` and applied via the `init.ps1` script, which stores them in .NET User Secrets. This ensures that keys are not hardcoded and are managed securely during local development. The `Vehicle.Service` client within the `Insurance.Service` is also configured with the correct key via dependency injection.
@@ -109,10 +109,10 @@ The solution uses a generic and reusable feature toggle system to enable or disa
 ### Prerequisites
 
 -   .NET 8 SDK
--   PowerShell
+-   PowerShell 7+
 -   Docker and Docker Compose (if using the Docker-based setup)
 
-This project provides two ways to run the services locally: via Docker Compose (recommended for a simple, all-in-one setup) or by running the .NET services directly on your machine with HTTPS.
+This project provides two ways to run the services locally: via Docker Compose or by running the .NET services directly on your machine.
 
 ### Secret Management
 
