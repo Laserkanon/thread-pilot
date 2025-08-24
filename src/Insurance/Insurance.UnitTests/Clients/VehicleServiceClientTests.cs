@@ -26,6 +26,8 @@ public class VehicleServiceClientTests
         _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
         var inMemorySettings = new Dictionary<string, string?> {
             {"Vehicle.Service.Client:MaxDegreeOfParallelism", "5"},
+            {"Vehicle.Service.Client:MaxBatchSize", "2"},
+            {"Vehicle.Service.Client:MaxParallelBatches", "1"},
         };
 
         _configuration = new ConfigurationBuilder()
@@ -414,5 +416,85 @@ public class VehicleServiceClientTests
         result.Should().HaveCount(2);
         result.Should().Contain(v => v.RegistrationNumber == "REG1");
         result.Should().Contain(v => v.RegistrationNumber == "REG3");
+    }
+
+    [Fact]
+    public async Task GetVehiclesBatchAsync_WhenNumberOfVehiclesIsGreaterThanMaxBatchSize_ShouldChunkRequests()
+    {
+        // Arrange
+        var registrationNumbers = new[] { "REG1", "REG2", "REG3" }; // Batch size is 2
+        var vehicle1 = new Vehicle.Service.Contracts.Vehicle { RegistrationNumber = "REG1" };
+        var vehicle2 = new Vehicle.Service.Contracts.Vehicle { RegistrationNumber = "REG2" };
+        var vehicle3 = new Vehicle.Service.Contracts.Vehicle { RegistrationNumber = "REG3" };
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req => req.Content != null && req.Content.ReadAsStringAsync().Result.Contains("REG1") && req.Content.ReadAsStringAsync().Result.Contains("REG2")),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(new[] { vehicle1, vehicle2 }), System.Text.Encoding.UTF8, "application/json")
+            });
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.Is<HttpRequestMessage>(req => req.Content != null && req.Content.ReadAsStringAsync().Result.Contains("REG3")),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(new[] { vehicle3 }), System.Text.Encoding.UTF8, "application/json")
+            });
+
+        // Act
+        var result = (await _client.GetVehiclesBatchAsync(registrationNumbers)).ToArray();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().HaveCount(3);
+        _mockHttpMessageHandler.Protected().Verify(
+            "SendAsync",
+            Times.Exactly(2),
+            ItExpr.IsAny<HttpRequestMessage>(),
+            ItExpr.IsAny<CancellationToken>()
+        );
+    }
+
+    [Fact]
+    public async Task GetVehiclesBatchAsync_WhenNumberOfVehiclesIsLessThanMaxBatchSize_ShouldSendOneRequest()
+    {
+        // Arrange
+        var registrationNumbers = new[] { "REG1" }; // Batch size is 2
+        var vehicleContracts = new[] { new Vehicle.Service.Contracts.Vehicle { RegistrationNumber = "REG1" } };
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>()
+            )
+            .ReturnsAsync(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(JsonSerializer.Serialize(vehicleContracts), System.Text.Encoding.UTF8, "application/json")
+            });
+
+        // Act
+        var result = (await _client.GetVehiclesBatchAsync(registrationNumbers)).ToArray();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().HaveCount(1);
+        _mockHttpMessageHandler.Protected().Verify(
+            "SendAsync",
+            Times.Once(),
+            ItExpr.IsAny<HttpRequestMessage>(),
+            ItExpr.IsAny<CancellationToken>()
+        );
     }
 }
