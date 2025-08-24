@@ -26,6 +26,9 @@ This guide covers how to set up and run the project on your local machine for de
 Before running the application, you need to configure your local secrets. This project uses a `secrets.local.json.template` file as a blueprint. You'll create your own `secrets.local.json` file (which is git-ignored) and then run a script to apply these secrets to both Docker and non-Docker environments.
 
 1.  **Create the secrets file**: In the project's root directory, make a copy of `secrets.local.json.template` and rename it to **`secrets.local.json`**.
+    ```bash
+        cp secrets.local.json.template secrets.local.json
+    ```
 
 2.  **Edit the secrets file**: Open **`secrets.local.json`** and change your secret values.
 
@@ -74,7 +77,7 @@ This is the **fastest way to get the entire application running**, especially fo
 1.  Make sure your **Docker Engine is running**.
 2.  From the project's root directory, run:
     ```bash
-    docker-compose -f docker-compose.local.yml up --build
+    docker compose -f docker-compose.local.yml up --build
     ```
     This command builds the service images and starts containers for both services and a shared SQL Server database. Database migrations are applied automatically on startup.
 
