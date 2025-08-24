@@ -370,6 +370,7 @@ This section outlines potential enhancements to the solution, categorized for cl
 
 ### 8.3. Security
 -   **Centralized Secret Management**: Refactor the solution to remove secrets (like database passwords) from `appsettings.json` and `docker-compose.yml` files. Instead, integrate a proper secret management tool like HashiCorp Vault or Azure Key Vault. This addresses the concern of having passwords committed to the repository and prepares the application for secure production deployments.
+-   **Externalize SQL Username**: The SQL username (`sa`) is currently hardcoded in configuration builders. This should be externalized and managed as a secret to improve security and flexibility.
 -   **Secret Scanning**: Integrate automated secret scanning tools (like Gitleaks) into the CI pipeline to prevent sensitive information like API keys or credentials from being accidentally committed to the repository.
 
 ### 8.4. Testing and Quality Assurance
@@ -401,6 +402,7 @@ The following is a high-level, categorized list of the pending tasks documented 
 ### 9.1. Security
 *   **Total Estimated Effort**: ~1.5 days
 *   **Tasks**:
+    *   `[S]` **Task 57**: Externalize SQL Username
     *   `[M]` **Task 40**: Implement API Quotas and Rate Limiting
     *   `[M]` **Task 46**: Integrate Azure Key Vault
     *   `[M]` **Task 53**: Integrate Secret Scanning
