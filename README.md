@@ -30,7 +30,7 @@ To provide flexibility and safety, this entire process is controlled by two dist
 
 EnableVehicleEnrichment: This acts as a global "kill-switch." If the enrichment process causes any issues in production, this toggle can be set to false to disable all calls to the Vehicle.Service entirely.
 
-EnableBatchVehicleCall: This allows an operator to switch between the two strategies. By default, it is false, using the safe, concurrent single-call method. If the Vehicle.Service is ever updated with a trusted batch endpoint, this can be switched to true to gain the performance benefits.
+EnableBatchVehicleCall: This allows an operator to switch between the two strategies. By default, it is false, concurrent single-call method. If the Vehicle.Service is ever updated with a trusted batch endpoint, this can be switched to true to gain the performance benefits.
 
 ### 1.3. Dependency Injection (DI)
 
