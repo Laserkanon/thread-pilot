@@ -18,7 +18,7 @@ This guide covers how to set up and run the project on your local machine for de
 
 * **.NET 8 SDK**
 * **PowerShell 7+**
-* **Docker Engine**
+* **Docker**
 
 
 ### 1.2. Configure Secrets (One-Time Setup)
@@ -27,7 +27,7 @@ Before running the application, you need to configure your local secrets. This p
 
 1.  **Create the secrets file**: In the project's root directory, make a copy of `secrets.local.json.template` and rename it to **`secrets.local.json`**.
     ```bash
-        cp secrets.local.json.template secrets.local.json
+cp secrets.local.json.template secrets.local.json
     ```
 
 2.  **Edit the secrets file**: Open **`secrets.local.json`** and change your secret values.
@@ -374,7 +374,6 @@ This section outlines potential enhancements to the solution, categorized for cl
 
 ### 8.3. Security
 -   **Centralized Secret Management**: Refactor the solution to remove secrets (like database passwords) from `appsettings.json` and `docker-compose.yml` files. Instead, integrate a proper secret management tool like HashiCorp Vault or Azure Key Vault. This addresses the concern of having passwords committed to the repository and prepares the application for secure production deployments.
--   **Externalize SQL Username**: The SQL username (`sa`) is currently hardcoded in configuration builders. This should be externalized and managed as a secret to improve security and flexibility.
 -   **Secret Scanning**: Integrate automated secret scanning tools (like Gitleaks) into the CI pipeline to prevent sensitive information like API keys or credentials from being accidentally committed to the repository.
 
 ### 8.4. Testing and Quality Assurance
