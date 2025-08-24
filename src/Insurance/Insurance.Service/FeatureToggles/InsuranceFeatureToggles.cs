@@ -1,4 +1,4 @@
-namespace Insurance.Service.Settings;
+namespace Insurance.Service.FeatureToggles;
 
 public class InsuranceFeatureToggles
 {
