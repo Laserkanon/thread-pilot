@@ -24,7 +24,7 @@ public class RegistrationNumberListValidatorTests
     }
 
     [Fact]
-    public void Invalid_Item_Is_Indexed()
+    public void Item_Too_Short_Is_Indexed()
     {
         var payload = new[] { "AB", "A" }; // second item too short
         var result = _sut.TestValidate(payload);
@@ -34,4 +34,28 @@ public class RegistrationNumberListValidatorTests
             .WithErrorMessage("Registration number must be between 2 and 7 characters.");
     }
 
+    [Fact]
+    public void Item_Too_Long_Is_Indexed()
+    {
+        var payload = new[] { "ABC", "ABC12345" }; // second item is 8 chars long
+        var result = _sut.TestValidate(payload);
+
+        result.ShouldHaveValidationErrorFor("x[1]")
+            .WithErrorMessage("Registration number must be between 2 and 7 characters.");
+    }
+
+    [Fact]
+    public void List_With_Exactly_500_Items_Passes()
+    {
+        // Arrange: Create a list with exactly 500 valid items
+        var payload = Enumerable.Range(1, 500)
+            .Select(i => $"REG{i:D3}") // e.g., REG001
+            .ToArray();
+        
+        // Act
+        var result = _sut.TestValidate(payload);
+
+        // Assert
+        result.ShouldNotHaveAnyValidationErrors();
+    }
 }

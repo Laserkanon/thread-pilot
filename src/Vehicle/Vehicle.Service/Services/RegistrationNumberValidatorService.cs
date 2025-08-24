@@ -15,18 +15,35 @@ namespace Vehicle.Service.Services
 
         public string[] Validate(string[] registrationNumbers)
         {
-            if (registrationNumbers == null || registrationNumbers.Length == 0)
+            if (registrationNumbers.Length == 0)
             {
-                return Array.Empty<string>();
+                return [];
             }
 
+            var duplicates = registrationNumbers
+                .GroupBy(r => r)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .ToArray();
+
+            if (duplicates.Length != 0)
+            {
+                _logger.LogWarning("Duplicate registration numbers were found and will be processed only once: {DuplicateNumbers}", 
+                    string.Join(", ", duplicates));
+            }
+
+            var distinctRegistrationNumbers = registrationNumbers.Distinct();
             var validRegistrationNumbers = new List<string>();
-            foreach (var registrationNumber in registrationNumbers)
+            foreach (var registrationNumber in distinctRegistrationNumbers)
             {
                 var validationResult = _validator.Validate(registrationNumber);
                 if (validationResult.IsValid)
                 {
                     validRegistrationNumbers.Add(registrationNumber);
+                }
+                else
+                {
+                    _logger.LogWarning("The registration number {RegistrationNumber} has an invalid format and will be ignored.", registrationNumber);    
                 }
             }
 
