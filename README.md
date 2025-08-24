@@ -26,11 +26,20 @@ The default and safest method for fetching vehicle data is to make concurrent, d
 
 However, it is unclear how difficult it would be to change the legacy system. We imagined that if a developer on that team could expose a more efficient endpoint, let's say a batch variant, we would prefer to use it, as it would significantly reduce the overhead of multiple HTTP requests and also increase database efficiency (single vs. multiple lookups). To demonstrate this pattern, we have implemented a client method (GetVehiclesBatchAsync) that could consume such an endpoint.
 
-To provide flexibility and safety, this entire process is controlled by two distinct feature toggles:
+To provide flexibility and safety, this entire process is controlled by two distinct feature toggles: `EnableVehicleEnrichment` and `EnableBatchVehicleCall`.
 
-EnableVehicleEnrichment: This acts as a global "kill-switch." If the enrichment process causes any issues in production, this toggle can be set to false to disable all calls to the Vehicle.Service entirely.
+#### Configuration
+All parameters for the vehicle data enrichment strategy are configured in the `appsettings.json` file of the `Insurance.Service`.
 
-EnableBatchVehicleCall: This allows an operator to switch between the two strategies. By default, it is false, concurrent single-call method. If the Vehicle.Service is ever updated with a trusted batch endpoint, this can be switched to true to gain the performance benefits.
+- **`Vehicle.Service.Client:MaxDegreeOfParallelismSingle`**: This integer controls the maximum number of concurrent single-call requests sent to `Vehicle.Service`. It is a critical safety valve to prevent overwhelming a legacy system. The default value is `5`.
+
+- **`Vehicle.Service.Client:MaxDegreeOfParallelismBatch`**: This integer controls the maximum number of concurrent batch requests sent to `Vehicle.Service`. Its default value is `1` to ensure that even batch calls are sent sequentially unless explicitly configured otherwise.
+
+- **`Vehicle.Service.Client:MaxBatchSize`**: This integer defines the maximum number of registration numbers that can be included in a single batch request to `Vehicle.Service`. The default value is `50`.
+
+- **`FeatureToggles:EnableVehicleEnrichment`**: A boolean that acts as a global kill-switch for the entire enrichment process. If `false`, no calls will be made to `Vehicle.Service`. Defaults to `true`.
+
+- **`FeatureToggles:EnableBatchVehicleCall`**: A boolean that toggles between the two enrichment strategies. If `true`, the system will use the batch endpoint (`GetVehiclesBatchAsync`). If `false`, it will use concurrent single calls (`GetVehicleAsync`). Defaults to `false`.
 
 ### 1.3. Dependency Injection (DI)
 
