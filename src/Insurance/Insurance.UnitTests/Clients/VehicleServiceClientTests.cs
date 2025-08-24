@@ -25,9 +25,9 @@ public class VehicleServiceClientTests
     {
         _mockHttpMessageHandler = new Mock<HttpMessageHandler>();
         var inMemorySettings = new Dictionary<string, string?> {
-            {"Vehicle.Service.Client:MaxDegreeOfParallelism", "5"},
+            {"Vehicle.Service.Client:MaxDegreeOfParallelismSingle", "5"},
             {"Vehicle.Service.Client:MaxBatchSize", "2"},
-            {"Vehicle.Service.Client:MaxParallelBatches", "1"},
+            {"Vehicle.Service.Client:MaxDegreeOfParallelismBatch", "1"},
         };
 
         _configuration = new ConfigurationBuilder()

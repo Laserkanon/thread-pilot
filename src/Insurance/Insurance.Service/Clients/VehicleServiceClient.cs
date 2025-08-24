@@ -9,9 +9,9 @@ public class VehicleServiceClient : IVehicleServiceClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<VehicleServiceClient> _logger;
-    private readonly int _maxDegreeOfParallelism;
+    private readonly int _maxDegreeOfParallelismSingle;
     private readonly int _maxBatchSize;
-    private readonly int _maxParallelBatches;
+    private readonly int _maxDegreeOfParallelismBatch;
 
     public VehicleServiceClient(
         HttpClient httpClient,
@@ -20,9 +20,9 @@ public class VehicleServiceClient : IVehicleServiceClient
     {
         _httpClient = httpClient;
         _logger = logger;
-        _maxDegreeOfParallelism = configuration.GetValue("Vehicle.Service.Client:MaxDegreeOfParallelism", 5);
+        _maxDegreeOfParallelismSingle = configuration.GetValue("Vehicle.Service.Client:MaxDegreeOfParallelismSingle", 5);
         _maxBatchSize = configuration.GetValue("Vehicle.Service.Client:MaxBatchSize", 50);
-        _maxParallelBatches = configuration.GetValue("Vehicle.Service.Client:MaxParallelBatches", 1);
+        _maxDegreeOfParallelismBatch = configuration.GetValue("Vehicle.Service.Client:MaxDegreeOfParallelismBatch", 1);
     }
 
     public async Task<IEnumerable<Models.VehicleDetails>> GetVehiclesBatchAsync(string[] registrationNumbers)
@@ -35,7 +35,7 @@ public class VehicleServiceClient : IVehicleServiceClient
         var chunks = registrationNumbers.Chunk(_maxBatchSize);
         var allVehicles = new System.Collections.Concurrent.ConcurrentBag<Models.VehicleDetails>();
 
-        await Parallel.ForEachAsync(chunks, new ParallelOptions { MaxDegreeOfParallelism = _maxParallelBatches }, async (chunk, _) =>
+        await Parallel.ForEachAsync(chunks, new ParallelOptions { MaxDegreeOfParallelism = _maxDegreeOfParallelismBatch }, async (chunk, _) =>
         {
             var response = await _httpClient.PostAsJsonAsync("/api/v1/vehicles/batch", chunk);
 
@@ -64,7 +64,7 @@ public class VehicleServiceClient : IVehicleServiceClient
         var vehicleDetails = new System.Collections.Concurrent.ConcurrentBag<Models.VehicleDetails>();
 
         await Parallel.ForEachAsync(registrationNumbers,
-            new ParallelOptions { MaxDegreeOfParallelism = _maxDegreeOfParallelism },
+            new ParallelOptions { MaxDegreeOfParallelism = _maxDegreeOfParallelismSingle },
             async (regNumber, _) =>
             {
                 var vehicle = await GetVehicleAsync(regNumber);
