@@ -1,13 +1,14 @@
 using FluentValidation;
+using Infrastructure.FeatureToggle;
 using Infrastructure.Hosting;
 using Infrastructure.HttpClient;
 using Insurance.Service.Clients;
+using Insurance.Service.Configuration;
+using Insurance.Service.Policies;
 using Insurance.Service.Repositories;
 using Insurance.Service.Services;
-using Insurance.Service.Validators;
-using Insurance.Service.Contracts;
-using Insurance.Service.Policies;
 using Insurance.Service.Settings;
+using Insurance.Service.Validators;
 using VehicleHost = Vehicle.Service.Contracts.Host;
 using ILogger = Serilog.ILogger;
 
@@ -23,9 +24,7 @@ builder.Services.AddScoped<IInsuranceService, InsuranceService>();
 builder.Services.AddFeatureToggles<InsuranceFeatureToggles>(builder.Configuration);
 builder.Services.AddScoped<IValidator<string>, PersonalIdentifyNumberValidator>();
 
-var vehicleServiceSettings = new VehicleServiceClientConfiguration();
-builder.Configuration.GetSection("Vehicle.Service.Client").Bind(vehicleServiceSettings);
-builder.Services.AddSingleton(vehicleServiceSettings);
+builder.Services.AddConfiguration<VehicleServiceClientConfiguration>(builder.Configuration, VehicleHost.ClientName);
 
 // Typed HttpClient for Vehicle Service
 builder.Services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>()

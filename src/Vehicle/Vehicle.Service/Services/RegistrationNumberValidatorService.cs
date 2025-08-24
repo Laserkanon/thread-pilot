@@ -1,5 +1,4 @@
 using FluentValidation;
-using Microsoft.Extensions.Logging;
 
 namespace Vehicle.Service.Services
 {

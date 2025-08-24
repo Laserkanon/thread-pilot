@@ -35,8 +35,6 @@ public class InsuranceTestWebApplicationFactory : WebApplicationFactory<Program>
 
                 //Mock external service
                 services.AddScoped<IVehicleServiceClient>(_ => MockVehicleClient.Object);
-
-                services.AddOpenTelemetry().WithMetrics(builder => builder.AddPrometheusExporter());
             });
     }
 }

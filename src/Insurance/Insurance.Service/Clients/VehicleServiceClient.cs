@@ -1,8 +1,6 @@
-using System.Net;
-using System.Text.Json;
-using Insurance.Service.Contracts;
+using Insurance.Service.Configuration;
 using Insurance.Service.Extensions;
-using Insurance.Service.Services;
+using Microsoft.Extensions.Options;
 
 namespace Insurance.Service.Clients;
 
@@ -10,20 +8,16 @@ public class VehicleServiceClient : IVehicleServiceClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<VehicleServiceClient> _logger;
-    private readonly int _maxDegreeOfParallelismSingle;
-    private readonly int _maxBatchSize;
-    private readonly int _maxDegreeOfParallelismBatch;
+    private readonly VehicleServiceClientConfiguration _configuration;
 
     public VehicleServiceClient(
         HttpClient httpClient,
         ILogger<VehicleServiceClient> logger,
-        VehicleServiceClientConfiguration vehicleServiceClientConfiguration)
+        IOptions<VehicleServiceClientConfiguration> vehicleServiceClientConfiguration)
     {
         _httpClient = httpClient;
         _logger = logger;
-        _maxDegreeOfParallelismSingle = vehicleServiceClientConfiguration.MaxDegreeOfParallelismSingle;
-        _maxBatchSize = vehicleServiceClientConfiguration.MaxBatchSize;
-        _maxDegreeOfParallelismBatch = vehicleServiceClientConfiguration.MaxDegreeOfParallelismBatch;
+        _configuration = vehicleServiceClientConfiguration.Value;
     }
 
     public async Task<IEnumerable<Models.VehicleDetails>> GetVehiclesBatchAsync(string[] registrationNumbers)
@@ -33,10 +27,10 @@ public class VehicleServiceClient : IVehicleServiceClient
             return [];
         }
 
-        var chunks = registrationNumbers.Chunk(_maxBatchSize);
+        var chunks = registrationNumbers.Chunk(_configuration.MaxBatchSize);
         var allVehicles = new System.Collections.Concurrent.ConcurrentBag<Models.VehicleDetails>();
 
-        await Parallel.ForEachAsync(chunks, new ParallelOptions { MaxDegreeOfParallelism = _maxDegreeOfParallelismBatch }, async (chunk, _) =>
+        await Parallel.ForEachAsync(chunks, new ParallelOptions { MaxDegreeOfParallelism = _configuration.MaxDegreeOfParallelismBatch }, async (chunk, _) =>
         {
             var response = await _httpClient.PostAsJsonAsync("/api/v1/vehicles/batch", chunk);
 
@@ -65,7 +59,7 @@ public class VehicleServiceClient : IVehicleServiceClient
         var vehicleDetails = new System.Collections.Concurrent.ConcurrentBag<Models.VehicleDetails>();
 
         await Parallel.ForEachAsync(registrationNumbers,
-            new ParallelOptions { MaxDegreeOfParallelism = _maxDegreeOfParallelismSingle },
+            new ParallelOptions { MaxDegreeOfParallelism = _configuration.MaxDegreeOfParallelismSingle },
             async (regNumber, _) =>
             {
                 var vehicle = await GetVehicleAsync(regNumber);

@@ -2,10 +2,8 @@ using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Vehicle.Service.Controllers;
-using Vehicle.Service.Models;
 using Vehicle.Service.Repositories;
 using Vehicle.Service.Services;
-using Xunit;
 
 namespace Vehicle.UnitTests.Controllers
 {

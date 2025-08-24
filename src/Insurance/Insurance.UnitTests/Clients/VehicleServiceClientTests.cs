@@ -1,16 +1,14 @@
 using System.Net;
-using System.Net.Http;
 using System.Text.Json;
 using FluentAssertions;
 using Insurance.Service.Clients;
-using Insurance.Service.Contracts;
+using Insurance.Service.Configuration;
 using Insurance.Service.Policies;
 using Microsoft.Extensions.DependencyInjection;
-using Insurance.Service.Services;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
-using Polly;
 using ILogger = Serilog.ILogger;
 
 namespace Insurance.UnitTests.Clients;
@@ -28,11 +26,16 @@ public class VehicleServiceClientTests
         {
             MaxDegreeOfParallelismSingle = 5,
             MaxBatchSize = 2,
-            MaxDegreeOfParallelismBatch = 1
+            MaxDegreeOfParallelismBatch = 1,
+            BaseUrl = "http://localhost:8080",
+            ApiKey = Guid.NewGuid().ToString()
         };
 
         var services = new ServiceCollection();
-        services.AddSingleton(vehicleServiceClientConfiguration);
+        
+        // Correctly register the configuration for IOptions<T>
+        services.AddSingleton(Options.Create(vehicleServiceClientConfiguration));
+        
         services.AddSingleton<Microsoft.Extensions.Logging.ILogger<VehicleServiceClient>>(NullLogger<VehicleServiceClient>.Instance);
 
         services.AddHttpClient<IVehicleServiceClient, VehicleServiceClient>(c =>
@@ -190,7 +193,11 @@ public class VehicleServiceClientTests
             .ReturnsAsync(successResponseMessage);
 
         var services = new ServiceCollection();
-        services.AddSingleton(new VehicleServiceClientConfiguration { MaxDegreeOfParallelismSingle = 5, MaxBatchSize = 2, MaxDegreeOfParallelismBatch = 1 });
+        var config = new VehicleServiceClientConfiguration { MaxDegreeOfParallelismSingle = 5, MaxBatchSize = 2, MaxDegreeOfParallelismBatch = 1, BaseUrl = "http://localhost:8080", ApiKey = Guid.NewGuid().ToString()};
+        
+        // Correctly register the configuration for IOptions<T>
+        services.AddSingleton(Options.Create(config));
+        
         services.AddSingleton<Microsoft.Extensions.Logging.ILogger<VehicleServiceClient>>(NullLogger<VehicleServiceClient>.Instance);
         services.AddSingleton(mockLogger.Object);
 
@@ -243,7 +250,11 @@ public class VehicleServiceClientTests
             .ReturnsAsync(successResponseMessage);
 
         var services = new ServiceCollection();
-        services.AddSingleton(new VehicleServiceClientConfiguration { MaxDegreeOfParallelismSingle = 5, MaxBatchSize = 2, MaxDegreeOfParallelismBatch = 1 });
+        var config = new VehicleServiceClientConfiguration { MaxDegreeOfParallelismSingle = 5, MaxBatchSize = 2, MaxDegreeOfParallelismBatch = 1, BaseUrl = "http://localhost:8080", ApiKey = Guid.NewGuid().ToString() };
+        
+        // Correctly register the configuration for IOptions<T>
+        services.AddSingleton(Options.Create(config));
+        
         services.AddSingleton<Microsoft.Extensions.Logging.ILogger<VehicleServiceClient>>(NullLogger<VehicleServiceClient>.Instance);
         services.AddSingleton(mockLogger.Object);
 
@@ -289,7 +300,11 @@ public class VehicleServiceClientTests
             .ReturnsAsync(errorResponseMessage);
 
         var services = new ServiceCollection();
-        services.AddSingleton(new VehicleServiceClientConfiguration { MaxDegreeOfParallelismSingle = 5, MaxBatchSize = 2, MaxDegreeOfParallelismBatch = 1 });
+        var config = new VehicleServiceClientConfiguration { MaxDegreeOfParallelismSingle = 5, MaxBatchSize = 2, MaxDegreeOfParallelismBatch = 1, BaseUrl = "http://localhost:8080", ApiKey = Guid.NewGuid().ToString() };
+        
+        // Correctly register the configuration for IOptions<T>
+        services.AddSingleton(Options.Create(config));
+        
         services.AddSingleton<Microsoft.Extensions.Logging.ILogger<VehicleServiceClient>>(NullLogger<VehicleServiceClient>.Instance);
         services.AddSingleton(mockLogger.Object);
 
@@ -333,7 +348,11 @@ public class VehicleServiceClientTests
             .ReturnsAsync(errorResponseMessage);
 
         var services = new ServiceCollection();
-        services.AddSingleton(new VehicleServiceClientConfiguration { MaxDegreeOfParallelismSingle = 5, MaxBatchSize = 2, MaxDegreeOfParallelismBatch = 1 });
+        var config = new VehicleServiceClientConfiguration { MaxDegreeOfParallelismSingle = 5, MaxBatchSize = 2, MaxDegreeOfParallelismBatch = 1, BaseUrl = "http://localhost:8080", ApiKey = Guid.NewGuid().ToString() };
+        
+        // Correctly register the configuration for IOptions<T>
+        services.AddSingleton(Options.Create(config));
+        
         services.AddSingleton<Microsoft.Extensions.Logging.ILogger<VehicleServiceClient>>(NullLogger<VehicleServiceClient>.Instance);
         services.AddSingleton(mockLogger.Object);
 

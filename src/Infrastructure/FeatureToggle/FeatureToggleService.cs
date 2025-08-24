@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Options;
 
-namespace Infrastructure.Services;
+namespace Infrastructure.FeatureToggle;
 
 public class FeatureToggleService<T> : IFeatureToggleService<T> where T : class, new()
 {

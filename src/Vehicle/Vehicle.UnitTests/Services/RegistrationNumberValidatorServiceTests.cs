@@ -1,10 +1,7 @@
-using FluentValidation;
-using FluentValidation.TestHelper;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Vehicle.Service.Services;
 using Vehicle.Service.Validators;
-using Xunit;
 
 namespace Vehicle.UnitTests.Services
 {

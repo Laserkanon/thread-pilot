@@ -28,7 +28,6 @@ public class VehicleTestWebApplicationFactory : WebApplicationFactory<Program>
             .ConfigureServices(services =>
             {
                 services.AddScoped<ITestDataSeeder, TestDataSeeder>();
-                services.AddOpenTelemetry().WithMetrics(builder => builder.AddPrometheusExporter());
             });
     }
 }

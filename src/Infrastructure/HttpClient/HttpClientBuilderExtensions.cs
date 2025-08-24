@@ -1,5 +1,4 @@
-﻿using Insurance.Service.Contracts.Settings;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.HttpClient;
 
@@ -11,7 +10,7 @@ public static class HttpClientBuilderExtensions
     /// <param name="builder">The IHttpClientBuilder to configure.</param>
     /// <returns>The IHttpClientBuilder for chaining.</returns>
     public static IHttpClientBuilder ConfigureHttpClientWithApiKey<T>(
-        this IHttpClientBuilder builder) where T : class, IClientConfiguration
+        this IHttpClientBuilder builder) where T : class, IHttpClientBaseConfiguration
     {
         builder.ConfigureHttpClient((serviceProvider, client) =>
         {
